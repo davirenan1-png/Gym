@@ -1,3 +1,6 @@
+> Este repositório contém dois apps independentes: o CTM Aviação (abaixo) e o
+> app pessoal de treino/dieta/jiu-jitsu em [`fitness-app/`](fitness-app/README.md).
+
 # CTM Aviação — Controle Técnico de Manutenção
 
 Sistema web para controle do programa de manutenção de aeronaves, com matrizes

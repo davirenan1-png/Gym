@@ -1,0 +1,129 @@
+import { useEffect, useState, useCallback } from 'react';
+import { api } from '../lib/api.js';
+import { todayKey, formatDate, BELT_LABELS, BELT_COLORS } from '../lib/format.js';
+import { Card } from '../components/Card.jsx';
+import { ProgressBar } from '../components/ProgressBar.jsx';
+
+export function Today() {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const date = todayKey();
+
+  const load = useCallback(() => {
+    api.dashboard(date).then(setData).catch(() => {});
+  }, [date]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function addWater(ml) {
+    setBusy(true);
+    try {
+      await api.water.add(ml, date);
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!data) return null;
+
+  const waterGoal = Number(data.settings.water_goal_ml) || 3000;
+  const calorieGoal = Number(data.settings.calorie_goal) || 0;
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Hoje</h1>
+        <span className="page-date">{formatDate(date)}</span>
+      </div>
+
+      <Card title="💧 Água">
+        <ProgressBar
+          value={data.water_ml}
+          max={waterGoal}
+          label={`${data.water_ml} ml / ${waterGoal} ml`}
+          color="var(--accent)"
+        />
+        {data.water_ml < waterGoal && (
+          <p style={{ margin: '8px 0 0', fontSize: '0.82rem' }}>
+            Faltam {waterGoal - data.water_ml} ml para a meta de hoje.
+          </p>
+        )}
+        <div className="quick-actions">
+          <button className="btn" disabled={busy} onClick={() => addWater(250)}>+250 ml</button>
+          <button className="btn" disabled={busy} onClick={() => addWater(500)}>+500 ml</button>
+          <button className="btn" disabled={busy} onClick={() => addWater(750)}>+750 ml</button>
+        </div>
+      </Card>
+
+      <Card title="🍽️ Alimentação">
+        {calorieGoal > 0 ? (
+          <ProgressBar
+            value={data.food.calories}
+            max={calorieGoal}
+            label={`${Math.round(data.food.calories)} kcal / ${calorieGoal} kcal`}
+            color="var(--accent-2)"
+          />
+        ) : (
+          <p style={{ margin: 0 }}>{Math.round(data.food.calories)} kcal registradas hoje</p>
+        )}
+        <div className="stat-grid" style={{ marginTop: 12 }}>
+          <div className="stat-tile">
+            <div className="stat-value">{Math.round(data.food.protein_g)}g</div>
+            <div className="stat-label">Proteína</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-value">{Math.round(data.food.carbs_g)}g</div>
+            <div className="stat-label">Carboidrato</div>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="🏋️ Treino & 🥋 Jiu-Jitsu">
+        <div className="stat-grid">
+          <div className="stat-tile">
+            <div className="stat-value">{data.workout_sessions_today > 0 ? '✅' : '—'}</div>
+            <div className="stat-label">Musculação</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-value">{data.jiujitsu_sessions_today > 0 ? '✅' : '—'}</div>
+            <div className="stat-label">Jiu-Jitsu</div>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="⚖️ Peso & Faixa">
+        <div className="stat-grid">
+          <div className="stat-tile">
+            <div className="stat-value">
+              {data.latest_weight ? `${data.latest_weight.weight_kg} kg` : '—'}
+            </div>
+            <div className="stat-label">
+              {data.latest_weight ? formatDate(data.latest_weight.date) : 'Sem registro'}
+            </div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-value">
+              {data.belt ? (
+                <span
+                  className="badge"
+                  style={{
+                    background: BELT_COLORS[data.belt.belt],
+                    color: data.belt.belt === 'branca' ? '#0f172a' : '#fff',
+                  }}
+                >
+                  {BELT_LABELS[data.belt.belt]}
+                </span>
+              ) : (
+                '—'
+              )}
+            </div>
+            <div className="stat-label">{data.belt ? `${data.belt.stripes} graus` : 'Sem faixa'}</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
