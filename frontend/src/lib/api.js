@@ -22,31 +22,32 @@ async function request(path, options = {}) {
 export const api = {
   dashboard: () => request('/dashboard'),
 
+  models: {
+    list: () => request('/models'),
+    get: (id) => request(`/models/${id}`),
+    create: (data) => request('/models', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/models/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id) => request(`/models/${id}`, { method: 'DELETE' }),
+    addItem: (modelId, data) => request(`/models/${modelId}/items`, { method: 'POST', body: JSON.stringify(data) }),
+    updateItem: (modelId, itemId, data) => request(`/models/${modelId}/items/${itemId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    removeItem: (modelId, itemId) => request(`/models/${modelId}/items/${itemId}`, { method: 'DELETE' }),
+    bulkImport: (modelId, rows) => request(`/models/${modelId}/items/bulk`, { method: 'POST', body: JSON.stringify({ rows }) }),
+  },
+
   aircraft: {
     list: () => request('/aircraft'),
     get: (id) => request(`/aircraft/${id}`),
     create: (data) => request('/aircraft', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/aircraft/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateCounters: (id, data) => request(`/aircraft/${id}/counters`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id) => request(`/aircraft/${id}`, { method: 'DELETE' }),
   },
 
-  maintenances: {
-    list: (aircraftId) => request(`/maintenances${aircraftId ? `?aircraft_id=${aircraftId}` : ''}`),
-    create: (data) => request('/maintenances', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => request(`/maintenances/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    remove: (id) => request(`/maintenances/${id}`, { method: 'DELETE' }),
-    executar: (id, data) => request(`/maintenances/${id}/executar`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
-  },
-
-  components: {
-    list: (aircraftId) => request(`/components${aircraftId ? `?aircraft_id=${aircraftId}` : ''}`),
-    create: (data) => request('/components', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => request(`/components/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    remove: (id) => request(`/components/${id}`, { method: 'DELETE' }),
-    substituir: (id, data) => request(`/components/${id}/substituir`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
-  },
-
-  serviceOrders: {
-    list: (aircraftId) => request(`/service-orders${aircraftId ? `?aircraft_id=${aircraftId}` : ''}`),
+  items: {
+    list: (aircraftId) => request(`/aircraft/${aircraftId}/items`),
+    create: (aircraftId, data) => request(`/aircraft/${aircraftId}/items`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id) => request(`/items/${id}`, { method: 'DELETE' }),
+    executar: (id, data) => request(`/items/${id}/executar`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
   },
 };

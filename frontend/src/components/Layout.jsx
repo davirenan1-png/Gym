@@ -15,14 +15,11 @@ export function Layout() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Painel
           </NavLink>
+          <NavLink to="/modelos" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Modelos
+          </NavLink>
           <NavLink to="/aeronaves" className={({ isActive }) => (isActive ? 'active' : '')}>
             Aeronaves
-          </NavLink>
-          <NavLink to="/manutencoes" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Manutenções
-          </NavLink>
-          <NavLink to="/componentes" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Componentes
           </NavLink>
         </nav>
       </header>

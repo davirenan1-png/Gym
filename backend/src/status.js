@@ -1,93 +1,54 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RANK = { ok: 0, proximo: 1, vencido: 2 };
 
-function classify(remaining, warnThreshold) {
-  if (remaining === null) return null;
+function classify(remaining, interval, tolerancePercent, defaultPercent) {
   if (remaining <= 0) return 'vencido';
-  if (remaining <= warnThreshold) return 'proximo';
+  const pct = tolerancePercent !== null && tolerancePercent !== undefined ? tolerancePercent / 100 : defaultPercent;
+  if (remaining <= interval * pct) return 'proximo';
   return 'ok';
 }
 
-export function computeMaintenanceStatus(schedule, aircraft) {
-  if (schedule.interval_type === 'horas') {
-    const base = schedule.last_done_hours ?? 0;
-    const dueAt = base + (schedule.interval_hours ?? 0);
-    const remaining = dueAt - aircraft.total_hours;
-    const warn = Math.max((schedule.interval_hours ?? 0) * 0.1, 5);
-    return {
-      status: classify(remaining, warn),
-      due_at_hours: dueAt,
-      remaining_hours: remaining,
-    };
-  }
-
-  if (schedule.interval_type === 'ciclos') {
-    const base = schedule.last_done_cycles ?? 0;
-    const dueAt = base + (schedule.interval_cycles ?? 0);
-    const remaining = dueAt - aircraft.total_cycles;
-    const warn = Math.max((schedule.interval_cycles ?? 0) * 0.1, 2);
-    return {
-      status: classify(remaining, warn),
-      due_at_cycles: dueAt,
-      remaining_cycles: remaining,
-    };
-  }
-
-  if (schedule.interval_type === 'calendario') {
-    if (!schedule.last_done_date || !schedule.interval_days) {
-      return { status: null, due_date: null, remaining_days: null };
-    }
-    const dueDate = new Date(schedule.last_done_date).getTime() + schedule.interval_days * DAY_MS;
-    const remainingDays = Math.ceil((dueDate - Date.now()) / DAY_MS);
-    const warn = Math.max(schedule.interval_days * 0.1, 10);
-    return {
-      status: classify(remainingDays, warn),
-      due_date: new Date(dueDate).toISOString().slice(0, 10),
-      remaining_days: remainingDays,
-    };
-  }
-
-  return { status: null };
-}
-
-export function computeComponentStatus(component, aircraft) {
-  const results = {};
+// counter: { hours, cycles } current values for the célula/motor/hélice this item is tied to
+export function computeItemStatus(item, counter) {
+  const dims = {};
   let worst = null;
-  const rank = { ok: 0, proximo: 1, vencido: 2 };
-
   const consider = (status) => {
     if (!status) return;
-    if (worst === null || rank[status] > rank[worst]) worst = status;
+    if (worst === null || RANK[status] > RANK[worst]) worst = status;
   };
 
-  if (component.life_limit_hours) {
-    const used = aircraft.total_hours - component.install_hours;
-    const remaining = component.life_limit_hours - used;
-    const warn = Math.max(component.life_limit_hours * 0.1, 5);
-    results.hours_status = classify(remaining, warn);
-    results.remaining_hours = remaining;
-    consider(results.hours_status);
+  if (item.interval_hours && counter && counter.hours !== null && counter.hours !== undefined) {
+    const base = item.last_done_hours ?? 0;
+    const dueAt = base + item.interval_hours;
+    const remaining = dueAt - counter.hours;
+    const status = classify(remaining, item.interval_hours, item.tolerance_percent, 0.1);
+    dims.hours_status = status;
+    dims.due_at_hours = dueAt;
+    dims.remaining_hours = remaining;
+    consider(status);
   }
 
-  if (component.life_limit_cycles) {
-    const used = aircraft.total_cycles - component.install_cycles;
-    const remaining = component.life_limit_cycles - used;
-    const warn = Math.max(component.life_limit_cycles * 0.1, 2);
-    results.cycles_status = classify(remaining, warn);
-    results.remaining_cycles = remaining;
-    consider(results.cycles_status);
+  if (item.interval_cycles && counter && counter.cycles !== null && counter.cycles !== undefined) {
+    const base = item.last_done_cycles ?? 0;
+    const dueAt = base + item.interval_cycles;
+    const remaining = dueAt - counter.cycles;
+    const status = classify(remaining, item.interval_cycles, item.tolerance_percent, 0.1);
+    dims.cycles_status = status;
+    dims.due_at_cycles = dueAt;
+    dims.remaining_cycles = remaining;
+    consider(status);
   }
 
-  if (component.life_limit_months && component.install_date) {
-    const expiry = new Date(component.install_date);
-    expiry.setMonth(expiry.getMonth() + component.life_limit_months);
-    const remainingDays = Math.ceil((expiry.getTime() - Date.now()) / DAY_MS);
-    const warn = Math.max(component.life_limit_months * 30 * 0.1, 30);
-    results.calendar_status = classify(remainingDays, warn);
-    results.expiry_date = expiry.toISOString().slice(0, 10);
-    results.remaining_days = remainingDays;
-    consider(results.calendar_status);
+  if (item.interval_days && item.last_done_date) {
+    const dueDate = new Date(item.last_done_date).getTime() + item.interval_days * DAY_MS;
+    const remainingDays = Math.ceil((dueDate - Date.now()) / DAY_MS);
+    const status = classify(remainingDays, item.interval_days, item.tolerance_percent, 0.1);
+    dims.days_status = status;
+    dims.due_date = new Date(dueDate).toISOString().slice(0, 10);
+    dims.remaining_days = remainingDays;
+    consider(status);
   }
 
-  results.status = worst ?? 'ok';
-  return results;
+  dims.status = worst;
+  return dims;
 }

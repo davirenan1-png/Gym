@@ -156,6 +156,41 @@ h2 {
   grid-column: span 2;
 }
 
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.fieldset {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem 1rem;
+}
+
+.form-grid-wide {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.counter-pair {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.counter-pair input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.fieldset legend {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 0.4rem;
+}
+
 input, select, textarea, button {
   font-family: inherit;
   font-size: 0.95rem;
