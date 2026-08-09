@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { computeItemStatus } from '../status.js';
+import { resolveCounter } from '../counters.js';
 
 export const router = Router();
 
@@ -9,7 +11,10 @@ function loadAircraftFull(id) {
   const model = db.prepare('SELECT * FROM aircraft_models WHERE id = ?').get(aircraft.model_id);
   const engines = db.prepare('SELECT * FROM aircraft_engines WHERE aircraft_id = ? ORDER BY role').all(id);
   const propellers = db.prepare('SELECT * FROM aircraft_propellers WHERE aircraft_id = ? ORDER BY role').all(id);
-  return { ...aircraft, model, engines, propellers };
+  const currentEvent = db
+    .prepare(`SELECT * FROM maintenance_events WHERE aircraft_id = ? AND status = 'em_andamento' ORDER BY id DESC LIMIT 1`)
+    .get(id);
+  return { ...aircraft, model, engines, propellers, current_event: currentEvent ?? null };
 }
 
 router.get('/', (req, res) => {
@@ -20,7 +25,24 @@ router.get('/', (req, res) => {
        ORDER BY aircraft.registration`
     )
     .all();
-  res.json(rows);
+
+  const withSummary = rows.map((aircraft) => {
+    const items = db.prepare('SELECT * FROM aircraft_items WHERE aircraft_id = ?').all(aircraft.id);
+    let vencidos = 0;
+    let proximos = 0;
+    for (const item of items) {
+      const counter = resolveCounter(aircraft, item.ref_type, item.ref_id);
+      const { status } = computeItemStatus(item, counter);
+      if (status === 'vencido') vencidos += 1;
+      if (status === 'proximo') proximos += 1;
+    }
+    const currentEvent = db
+      .prepare(`SELECT * FROM maintenance_events WHERE aircraft_id = ? AND status = 'em_andamento' ORDER BY id DESC LIMIT 1`)
+      .get(aircraft.id);
+    return { ...aircraft, vencidos_count: vencidos, proximos_count: proximos, current_event: currentEvent ?? null };
+  });
+
+  res.json(withSummary);
 });
 
 router.get('/:id', (req, res) => {

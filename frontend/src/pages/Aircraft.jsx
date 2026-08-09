@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { formatRemaining } from '../lib/format';
 
 const emptyForm = {
   model_id: '', registration: '', cell_serial_number: '', manufacture_date: '',
@@ -14,13 +15,20 @@ function emptyPropeller(role) {
   return { role, model: '', serial_number: '', hours: 0, cycles: '' };
 }
 
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+}
+
 export function Aircraft() {
+  const navigate = useNavigate();
   const [list, setList] = useState([]);
   const [models, setModels] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [engines, setEngines] = useState([emptyEngine('unico')]);
   const [propellers, setPropellers] = useState([]);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   function reload() {
     api.aircraft.list().then(setList).catch((e) => setError(e.message));
@@ -68,6 +76,7 @@ export function Aircraft() {
       setForm(emptyForm);
       setEngines([emptyEngine('unico')]);
       setPropellers([]);
+      setShowForm(false);
       reload();
     } catch (err) {
       setError(err.message);
@@ -86,10 +95,16 @@ export function Aircraft() {
 
   return (
     <div>
-      <h1>Aeronaves</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ marginBottom: 0 }}>Aeronaves</h1>
+        <button type="button" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? 'Cancelar' : '+ Nova aeronave'}
+        </button>
+      </div>
       {error && <p className="error">{error}</p>}
 
-      <section className="panel">
+      {showForm && (
+      <section className="panel" style={{ marginTop: '1rem' }}>
         <h2>Nova aeronave</h2>
         {models.length === 0 ? (
           <p className="hint">Cadastre um <Link to="/modelos">modelo</Link> antes de adicionar uma aeronave.</p>
@@ -169,42 +184,58 @@ export function Aircraft() {
           </form>
         )}
       </section>
+      )}
 
-      <section className="panel">
-        <h2>Frota</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>Modelo</th>
-              <th>Horas célula</th>
-              <th>Ciclos célula</th>
-              <th>Situação</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((a) => (
-              <tr key={a.id}>
-                <td><Link to={`/aeronaves/${a.id}`}>{a.registration}</Link></td>
-                <td>{a.model_name}</td>
-                <td>{a.cell_hours}</td>
-                <td>{a.cell_cycles}</td>
-                <td>{a.status}</td>
-                <td className="table-actions">
-                  <Link to={`/aeronaves/${a.id}`}><button type="button">Abrir</button></Link>
-                  <button type="button" className="btn-danger" onClick={() => onDelete(a.id)}>Excluir</button>
-                </td>
-              </tr>
-            ))}
-            {list.length === 0 && (
-              <tr>
-                <td colSpan={6} className="empty-state">Nenhuma aeronave cadastrada.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+      <div className="aircraft-grid">
+        {list.map((a) => {
+          const remaining = daysUntil(a.current_event?.predicted_delivery_date);
+          return (
+            <div
+              key={a.id}
+              className="aircraft-card"
+              onClick={() => navigate(`/aeronaves/${a.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/aeronaves/${a.id}`); }}
+            >
+              <div className="aircraft-card-header">
+                <span className="aircraft-card-reg">{a.registration}</span>
+                <span className={`badge badge-${a.status === 'ativa' ? 'ok' : 'muted'}`}>{a.status}</span>
+              </div>
+              <div className="hint">{a.model_name}</div>
+              <div className="aircraft-card-counters">
+                {a.cell_hours} h · {a.cell_cycles} ciclos
+              </div>
+
+              {a.current_event ? (
+                <div className="aircraft-card-pack">
+                  <div className="aircraft-card-pack-name">📦 {a.current_event.name}</div>
+                  {a.current_event.predicted_delivery_date && (
+                    <div className="hint">
+                      Previsão: {a.current_event.predicted_delivery_date}
+                      {remaining !== null && ` · ${formatRemaining(remaining, 'dias', remaining < 0 ? 'vencido' : 'ok')}`}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="hint">Sem pacote de manutenção ativo</div>
+              )}
+
+              <div className="aircraft-card-alerts">
+                {a.vencidos_count > 0 && <span className="badge badge-vencido">{a.vencidos_count} vencido(s)</span>}
+                {a.proximos_count > 0 && <span className="badge badge-proximo">{a.proximos_count} próximo(s)</span>}
+                {a.vencidos_count === 0 && a.proximos_count === 0 && <span className="badge badge-ok">Tudo em dia</span>}
+              </div>
+
+              <div className="table-actions" onClick={(e) => e.stopPropagation()}>
+                <Link to={`/aeronaves/${a.id}`}><button type="button">Abrir</button></Link>
+                <button type="button" className="btn-danger" onClick={() => onDelete(a.id)}>Excluir</button>
+              </div>
+            </div>
+          );
+        })}
+        {list.length === 0 && <p className="empty-state">Nenhuma aeronave cadastrada.</p>}
+      </div>
     </div>
   );
 }

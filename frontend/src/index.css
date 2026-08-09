@@ -168,6 +168,143 @@ h2 {
   padding: 0.8rem 1rem 1rem;
 }
 
+.aircraft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.aircraft-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 1.1rem 1.3rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.aircraft-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.aircraft-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.aircraft-card-reg {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.aircraft-card-counters {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.aircraft-card-pack {
+  background: #0c1420;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.aircraft-card-pack-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.aircraft-card-alerts {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.signature-pad {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  touch-action: none;
+  cursor: crosshair;
+  max-width: 100%;
+}
+
+.event-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #0c1420;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.2rem;
+}
+
+.event-card-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.2rem;
+}
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.kanban-col h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin: 0 0 0.6rem;
+}
+
+.kanban-card {
+  background: #0c1420;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kanban-card-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.kanban-pending-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.kanban-pending-form textarea {
+  background: #0c1420;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+@media (max-width: 900px) {
+  .kanban {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-grid-wide {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
@@ -227,6 +364,12 @@ button {
 
 button:hover {
   filter: brightness(1.08);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: none;
 }
 
 .btn-secondary {

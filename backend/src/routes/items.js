@@ -1,40 +1,13 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { computeItemStatus } from '../status.js';
+import { resolveCounter, refLabel } from '../counters.js';
 
 export const router = Router();
 
-function resolveCounter(aircraft, refType, refId) {
-  if (refType === 'celula') return { hours: aircraft.cell_hours, cycles: aircraft.cell_cycles };
-  if (refType === 'motor') {
-    const engine = db.prepare('SELECT * FROM aircraft_engines WHERE id = ?').get(refId);
-    return engine ? { hours: engine.hours, cycles: engine.cycles } : null;
-  }
-  if (refType === 'helice') {
-    const prop = db.prepare('SELECT * FROM aircraft_propellers WHERE id = ?').get(refId);
-    return prop ? { hours: prop.hours, cycles: prop.cycles } : null;
-  }
-  return null;
-}
-
-function refLabel(aircraft, refType, refId) {
-  if (refType === 'celula') return 'Célula';
-  if (refType === 'motor') {
-    const e = db.prepare('SELECT * FROM aircraft_engines WHERE id = ?').get(refId);
-    if (!e) return 'Motor';
-    return e.role === 'unico' ? 'Motor' : `Motor ${e.role.toUpperCase()}`;
-  }
-  if (refType === 'helice') {
-    const p = db.prepare('SELECT * FROM aircraft_propellers WHERE id = ?').get(refId);
-    if (!p) return 'Hélice';
-    return p.role === 'unico' ? 'Hélice' : `Hélice ${p.role.toUpperCase()}`;
-  }
-  return '';
-}
-
 function withStatus(item, aircraft) {
   const counter = resolveCounter(aircraft, item.ref_type, item.ref_id);
-  return { ...item, ref_label: refLabel(aircraft, item.ref_type, item.ref_id), ...computeItemStatus(item, counter) };
+  return { ...item, ref_label: refLabel(item.ref_type, item.ref_id), ...computeItemStatus(item, counter) };
 }
 
 router.get('/aircraft/:aircraftId/items', (req, res) => {
@@ -121,6 +94,11 @@ router.post('/items/:id/executar', (req, res) => {
   db.prepare('UPDATE aircraft_items SET last_done_hours = ?, last_done_cycles = ?, last_done_date = ? WHERE id = ?').run(
     counter?.hours ?? existing.last_done_hours, counter?.cycles ?? existing.last_done_cycles, date, req.params.id
   );
+  db.prepare(
+    `UPDATE event_items SET work_status = 'entregue', pending_reason = NULL, pending_notes = NULL
+     WHERE aircraft_item_id = ? AND work_status != 'entregue'
+       AND event_id IN (SELECT id FROM maintenance_events WHERE aircraft_id = ? AND status = 'em_andamento')`
+  ).run(req.params.id, existing.aircraft_id);
   const row = db.prepare('SELECT * FROM aircraft_items WHERE id = ?').get(req.params.id);
   res.json(withStatus(row, aircraft));
 });

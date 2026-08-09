@@ -5,6 +5,7 @@ import { Models } from './pages/Models';
 import { ModelDetail } from './pages/ModelDetail';
 import { Aircraft } from './pages/Aircraft';
 import { AircraftDetail } from './pages/AircraftDetail';
+import { ServiceOrderDetail } from './pages/ServiceOrderDetail';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/modelos/:id" element={<ModelDetail />} />
         <Route path="/aeronaves" element={<Aircraft />} />
         <Route path="/aeronaves/:id" element={<AircraftDetail />} />
+        <Route path="/aeronaves/:aircraftId/os/:osId" element={<ServiceOrderDetail />} />
       </Route>
     </Routes>
   );

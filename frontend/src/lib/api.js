@@ -50,4 +50,24 @@ export const api = {
     remove: (id) => request(`/items/${id}`, { method: 'DELETE' }),
     executar: (id, data) => request(`/items/${id}/executar`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
   },
+
+  events: {
+    list: (aircraftId) => request(`/aircraft/${aircraftId}/events`),
+    get: (id) => request(`/events/${id}`),
+    create: (aircraftId, data) => request(`/aircraft/${aircraftId}/events`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id) => request(`/events/${id}`, { method: 'DELETE' }),
+    addItems: (id, aircraftItemIds) => request(`/events/${id}/items`, { method: 'POST', body: JSON.stringify({ aircraft_item_ids: aircraftItemIds }) }),
+    updateItem: (eventItemId, data) => request(`/event-items/${eventItemId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    removeItem: (eventItemId) => request(`/event-items/${eventItemId}`, { method: 'DELETE' }),
+  },
+
+  serviceOrders: {
+    list: (aircraftId) => request(`/aircraft/${aircraftId}/service-orders`),
+    get: (id) => request(`/service-orders/${id}`),
+    create: (aircraftId, data) => request(`/aircraft/${aircraftId}/service-orders`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/service-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id) => request(`/service-orders/${id}`, { method: 'DELETE' }),
+    assinar: (id, data) => request(`/service-orders/${id}/assinar`, { method: 'POST', body: JSON.stringify(data) }),
+  },
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatRemaining } from '../lib/format';
@@ -10,14 +10,39 @@ const emptyItemForm = {
   last_done_hours: '', last_done_cycles: '', last_done_date: '',
 };
 
+const PENDING_REASON_LABEL = {
+  peca: 'Aguardando peça',
+  compra: 'Aguardando compra',
+  mao_de_obra: 'Aguardando mão de obra',
+  outro: 'Outro motivo',
+};
+
+const WORK_COLUMNS = [
+  { key: 'pendente', title: 'Pendente' },
+  { key: 'em_andamento', title: 'Em andamento' },
+  { key: 'entregue', title: 'Entregue' },
+];
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+}
+
 export function AircraftDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [aircraft, setAircraft] = useState(null);
   const [items, setItems] = useState([]);
+  const [currentEvent, setCurrentEvent] = useState(null);
+  const [serviceOrders, setServiceOrders] = useState([]);
   const [counters, setCounters] = useState(null);
   const [itemForm, setItemForm] = useState(emptyItemForm);
   const [editingItemId, setEditingItemId] = useState(null);
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [newEventForm, setNewEventForm] = useState({ name: '', predicted_delivery_date: '' });
+  const [pendingEditId, setPendingEditId] = useState(null);
+  const [pendingForm, setPendingForm] = useState({ pending_reason: 'peca', pending_notes: '' });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -30,8 +55,14 @@ export function AircraftDetail() {
         engines: a.engines.map((e) => ({ id: e.id, hours: e.hours, cycles: e.cycles })),
         propellers: a.propellers.map((p) => ({ id: p.id, hours: p.hours, cycles: p.cycles ?? '' })),
       });
+      if (a.current_event) {
+        api.events.get(a.current_event.id).then(setCurrentEvent).catch((e) => setError(e.message));
+      } else {
+        setCurrentEvent(null);
+      }
     }).catch((e) => setError(e.message));
     api.items.list(id).then(setItems).catch((e) => setError(e.message));
+    api.serviceOrders.list(id).then(setServiceOrders).catch((e) => setError(e.message));
   }
 
   useEffect(reload, [id]);
@@ -142,9 +173,118 @@ export function AircraftDetail() {
     }
   }
 
+  function toggleSelected(itemId) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
+      return next;
+    });
+  }
+
+  async function onCreateEvent(e) {
+    e.preventDefault();
+    setError('');
+    try {
+      await api.events.create(id, {
+        name: newEventForm.name,
+        predicted_delivery_date: newEventForm.predicted_delivery_date || null,
+      });
+      setNewEventForm({ name: '', predicted_delivery_date: '' });
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onConcludeEvent() {
+    if (!currentEvent) return;
+    if (!confirm(`Concluir o pacote "${currentEvent.name}"?`)) return;
+    try {
+      await api.events.update(currentEvent.id, { status: 'concluido' });
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onUpdateDeliveryDate() {
+    if (!currentEvent) return;
+    const value = prompt('Nova previsão de entrega (AAAA-MM-DD):', currentEvent.predicted_delivery_date ?? '');
+    if (value === null) return;
+    try {
+      await api.events.update(currentEvent.id, { predicted_delivery_date: value || null });
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onAddSelectedToEvent() {
+    if (!currentEvent || selectedIds.size === 0) return;
+    try {
+      await api.events.addItems(currentEvent.id, Array.from(selectedIds));
+      setSelectedIds(new Set());
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onGenerateServiceOrder() {
+    if (selectedIds.size === 0) return;
+    try {
+      const order = await api.serviceOrders.create(id, {
+        aircraft_item_ids: Array.from(selectedIds),
+        event_id: currentEvent?.id ?? null,
+      });
+      navigate(`/aeronaves/${id}/os/${order.id}`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onMoveWorkStatus(eventItemId, work_status) {
+    try {
+      await api.events.updateItem(eventItemId, { work_status, pending_reason: null, pending_notes: null });
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  function onStartPendingEdit(eventItem) {
+    setPendingEditId(eventItem.event_item_id);
+    setPendingForm({ pending_reason: eventItem.pending_reason ?? 'peca', pending_notes: eventItem.pending_notes ?? '' });
+  }
+
+  async function onSavePending() {
+    try {
+      await api.events.updateItem(pendingEditId, {
+        work_status: 'pendente',
+        pending_reason: pendingForm.pending_reason,
+        pending_notes: pendingForm.pending_notes || null,
+      });
+      setPendingEditId(null);
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function onRemoveFromEvent(eventItemId) {
+    if (!confirm('Remover este item do pacote?')) return;
+    try {
+      await api.events.removeItem(eventItemId);
+      reload();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   if (!aircraft || !counters) return error ? <p className="error">{error}</p> : <p>Carregando...</p>;
 
   const visibleItems = statusFilter === 'todos' ? items : items.filter((i) => i.status === statusFilter);
+  const deliveryRemaining = daysUntil(currentEvent?.predicted_delivery_date);
 
   return (
     <div>
@@ -152,6 +292,101 @@ export function AircraftDetail() {
       <h1>{aircraft.registration} <span className="hint">· {aircraft.model.name}</span></h1>
       {error && <p className="error">{error}</p>}
       {notice && <p className="hint">{notice}</p>}
+
+      <section className="panel">
+        <h2>Operacional</h2>
+        {currentEvent ? (
+          <>
+            <div className="event-card">
+              <div>
+                <div className="event-card-name">📦 {currentEvent.name}</div>
+                <div className="hint">Iniciado em {currentEvent.started_at}</div>
+                {currentEvent.predicted_delivery_date && (
+                  <div className={deliveryRemaining !== null && deliveryRemaining < 0 ? 'error' : 'hint'} style={{ margin: 0 }}>
+                    Previsão de entrega: {currentEvent.predicted_delivery_date}
+                    {deliveryRemaining !== null && ` (${formatRemaining(deliveryRemaining, 'dias', deliveryRemaining < 0 ? 'vencido' : 'ok')})`}
+                  </div>
+                )}
+              </div>
+              <div className="table-actions">
+                <button type="button" onClick={onUpdateDeliveryDate}>Editar previsão</button>
+                <button type="button" className="btn-secondary" onClick={onConcludeEvent}>Concluir pacote</button>
+              </div>
+            </div>
+
+            <div className="kanban">
+              {WORK_COLUMNS.map((col) => (
+                <div key={col.key} className="kanban-col">
+                  <h3>{col.title} ({currentEvent.items.filter((i) => i.work_status === col.key).length})</h3>
+                  {currentEvent.items.filter((i) => i.work_status === col.key).map((i) => (
+                    <div key={i.event_item_id} className="kanban-card">
+                      <div className="kanban-card-title">{i.nomenclatura}</div>
+                      <div className="hint">{i.ref_label}</div>
+                      <StatusBadge status={i.status} />
+                      {col.key === 'pendente' && pendingEditId !== i.event_item_id && i.pending_reason && (
+                        <div className="hint">
+                          {PENDING_REASON_LABEL[i.pending_reason]}{i.pending_notes ? `: ${i.pending_notes}` : ''}
+                        </div>
+                      )}
+                      {pendingEditId === i.event_item_id ? (
+                        <div className="kanban-pending-form">
+                          <select value={pendingForm.pending_reason} onChange={(e) => setPendingForm((f) => ({ ...f, pending_reason: e.target.value }))}>
+                            {Object.entries(PENDING_REASON_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                          </select>
+                          <textarea
+                            rows={2}
+                            value={pendingForm.pending_notes}
+                            onChange={(e) => setPendingForm((f) => ({ ...f, pending_notes: e.target.value }))}
+                            placeholder="Detalhes (ex: peça em trânsito, previsão do fornecedor...)"
+                          />
+                          <div className="table-actions">
+                            <button type="button" onClick={onSavePending}>Salvar</button>
+                            <button type="button" className="btn-secondary" onClick={() => setPendingEditId(null)}>Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="table-actions">
+                          {col.key !== 'em_andamento' && (
+                            <button type="button" onClick={() => onMoveWorkStatus(i.event_item_id, 'em_andamento')}>Em andamento</button>
+                          )}
+                          {col.key !== 'pendente' && (
+                            <button type="button" onClick={() => onStartPendingEdit(i)}>Marcar pendente</button>
+                          )}
+                          <button type="button" className="btn-danger" onClick={() => onRemoveFromEvent(i.event_item_id)}>Remover</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {currentEvent.items.filter((i) => i.work_status === col.key).length === 0 && (
+                    <p className="empty-state">Nenhum item.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="hint">
+              Selecione itens na matriz abaixo e use "Adicionar ao pacote" para incluí-los aqui, ou "Gerar Ordem de
+              Serviço" para já entregá-los com assinatura.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="hint">Nenhum pacote de manutenção ativo no momento.</p>
+            <form className="form-grid" onSubmit={onCreateEvent}>
+              <label>
+                Nome do pacote
+                <input required value={newEventForm.name} onChange={(e) => setNewEventForm((f) => ({ ...f, name: e.target.value }))} placeholder="Revisão 200h - Ago/2026" />
+              </label>
+              <label>
+                Previsão de entrega
+                <input type="date" value={newEventForm.predicted_delivery_date} onChange={(e) => setNewEventForm((f) => ({ ...f, predicted_delivery_date: e.target.value }))} />
+              </label>
+              <div className="form-actions">
+                <button type="submit">Iniciar pacote de manutenção</button>
+              </div>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className="panel">
         <h2>Atualizar horas / ciclos</h2>
@@ -251,8 +486,8 @@ export function AircraftDetail() {
       </section>
 
       <section className="panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>Matriz de manutenção ({items.length} itens)</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <h2 style={{ margin: 0 }}>Componentes e itens de manutenção ({items.length})</h2>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="todos">Todos</option>
             <option value="vencido">Vencidos</option>
@@ -260,9 +495,21 @@ export function AircraftDetail() {
             <option value="ok">Em dia</option>
           </select>
         </div>
+
+        <div className="table-actions" style={{ marginBottom: '0.8rem' }}>
+          <span className="hint">{selectedIds.size} selecionado(s)</span>
+          <button type="button" disabled={!currentEvent || selectedIds.size === 0} onClick={onAddSelectedToEvent}>
+            Adicionar ao pacote atual
+          </button>
+          <button type="button" disabled={selectedIds.size === 0} onClick={onGenerateServiceOrder}>
+            Gerar Ordem de Serviço
+          </button>
+        </div>
+
         <table className="table">
           <thead>
             <tr>
+              <th></th>
               <th>Zona</th>
               <th>Nomenclatura</th>
               <th>Aplica-se a</th>
@@ -275,6 +522,7 @@ export function AircraftDetail() {
           <tbody>
             {visibleItems.map((item) => (
               <tr key={item.id}>
+                <td><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} /></td>
                 <td>{item.zona ?? '—'}</td>
                 <td>{item.nomenclatura}</td>
                 <td>{item.ref_label}</td>
@@ -300,7 +548,42 @@ export function AircraftDetail() {
             ))}
             {visibleItems.length === 0 && (
               <tr>
-                <td colSpan={7} className="empty-state">Nenhum item nesta situação.</td>
+                <td colSpan={8} className="empty-state">Nenhum item nesta situação.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="panel">
+        <h2>Ordens de Serviço</h2>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>OS</th>
+              <th>Data</th>
+              <th>Mecânico</th>
+              <th>Itens</th>
+              <th>Situação</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {serviceOrders.map((os) => (
+              <tr key={os.id}>
+                <td>#{os.id}</td>
+                <td>{os.performed_at_date ?? '—'}</td>
+                <td>{os.performed_by ?? '—'}</td>
+                <td>{os.items.length}</td>
+                <td><span className={`badge badge-${os.status === 'assinada' ? 'ok' : 'proximo'}`}>{os.status === 'assinada' ? 'Assinada' : 'Rascunho'}</span></td>
+                <td className="table-actions">
+                  <Link to={`/aeronaves/${id}/os/${os.id}`}><button type="button">Abrir</button></Link>
+                </td>
+              </tr>
+            ))}
+            {serviceOrders.length === 0 && (
+              <tr>
+                <td colSpan={6} className="empty-state">Nenhuma ordem de serviço gerada ainda.</td>
               </tr>
             )}
           </tbody>
