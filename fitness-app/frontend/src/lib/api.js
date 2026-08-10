@@ -56,6 +56,15 @@ export const api = {
     removeSession: (id) => request(`/workouts/sessions/${id}`, { method: 'DELETE' }),
   },
 
+  routine: {
+    list: () => request('/routine'),
+    updateDay: (weekday, data) => request(`/routine/${weekday}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateNote: (note) => request('/routine/note', { method: 'PUT', body: JSON.stringify({ note }) }),
+    addExercise: (weekday, data) => request(`/routine/${weekday}/exercises`, { method: 'POST', body: JSON.stringify(data) }),
+    updateExercise: (id, data) => request(`/routine/exercises/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    removeExercise: (id) => request(`/routine/exercises/${id}`, { method: 'DELETE' }),
+  },
+
   jiujitsu: {
     sessions: (limit) => request(`/jiujitsu/sessions${limit ? `?limit=${limit}` : ''}`),
     addSession: (data) => request('/jiujitsu/sessions', { method: 'POST', body: JSON.stringify(data) }),

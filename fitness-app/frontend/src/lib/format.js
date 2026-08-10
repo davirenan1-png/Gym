@@ -47,3 +47,30 @@ export const BELT_COLORS = {
   marrom: '#78350f',
   preta: '#0f172a',
 };
+
+export const WEEKDAYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+
+export const WEEKDAY_LABELS = {
+  segunda: 'Segunda',
+  terca: 'Terça',
+  quarta: 'Quarta',
+  quinta: 'Quinta',
+  sexta: 'Sexta',
+  sabado: 'Sábado',
+  domingo: 'Domingo',
+};
+
+export const WEEKDAY_SHORT_LABELS = {
+  segunda: 'Seg',
+  terca: 'Ter',
+  quarta: 'Qua',
+  quinta: 'Qui',
+  sexta: 'Sex',
+  sabado: 'Sáb',
+  domingo: 'Dom',
+};
+
+export function todayWeekdayKey() {
+  const byJsDay = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+  return byJsDay[new Date(todayKey()).getUTCDay()];
+}

@@ -6,6 +6,7 @@ import { router as waterRouter } from './routes/water.js';
 import { router as weightRouter } from './routes/weight.js';
 import { router as nutritionRouter } from './routes/nutrition.js';
 import { router as workoutsRouter } from './routes/workouts.js';
+import { router as routineRouter } from './routes/routine.js';
 import { router as jiujitsuRouter } from './routes/jiujitsu.js';
 import { router as dashboardRouter } from './routes/dashboard.js';
 
@@ -21,6 +22,7 @@ app.use('/api/water', waterRouter);
 app.use('/api/weight', weightRouter);
 app.use('/api/food', nutritionRouter);
 app.use('/api/workouts', workoutsRouter);
+app.use('/api/routine', routineRouter);
 app.use('/api/jiujitsu', jiujitsuRouter);
 app.use('/api/dashboard', dashboardRouter);
 

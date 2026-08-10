@@ -1,16 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api.js';
-import { todayKey, formatDate, BELT_LABELS, BELT_COLORS } from '../lib/format.js';
+import { todayKey, formatDate, todayWeekdayKey, BELT_LABELS, BELT_COLORS } from '../lib/format.js';
 import { Card } from '../components/Card.jsx';
 import { ProgressBar } from '../components/ProgressBar.jsx';
 
 export function Today() {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [todayPlan, setTodayPlan] = useState(null);
   const date = todayKey();
 
   const load = useCallback(() => {
     api.dashboard(date).then(setData).catch(() => {});
+    api.routine.list().then((r) => {
+      setTodayPlan(r.days.find((d) => d.weekday === todayWeekdayKey()) || null);
+    });
   }, [date]);
 
   useEffect(() => {
@@ -82,6 +86,12 @@ export function Today() {
       </Card>
 
       <Card title="🏋️ Treino & 🥋 Jiu-Jitsu">
+        {todayPlan && (
+          <p style={{ margin: '0 0 12px', fontSize: '0.85rem' }}>
+            Plano de hoje: <strong>{todayPlan.title}</strong>
+            {todayPlan.note ? ` — ${todayPlan.note}` : ''}
+          </p>
+        )}
         <div className="stat-grid">
           <div className="stat-tile">
             <div className="stat-value">{data.workout_sessions_today > 0 ? '✅' : '—'}</div>

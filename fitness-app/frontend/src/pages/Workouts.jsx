@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../lib/api.js';
 import { todayKey, formatDate } from '../lib/format.js';
 import { Card } from '../components/Card.jsx';
 import { LineChart } from '../components/LineChart.jsx';
+import { RoutinePlan } from '../components/RoutinePlan.jsx';
 
 export function Workouts() {
   const [exercises, setExercises] = useState([]);
@@ -13,6 +14,7 @@ export function Workouts() {
   const [setForm, setSetForm] = useState({ exercise_id: '', reps: '', weight_kg: '' });
   const [progressExerciseId, setProgressExerciseId] = useState('');
   const [progressPoints, setProgressPoints] = useState([]);
+  const registerRef = useRef(null);
 
   const load = useCallback(() => {
     api.workouts.exercises().then((list) => {
@@ -75,11 +77,27 @@ export function Workouts() {
     load();
   }
 
+  async function useExerciseFromPlan(name) {
+    let exercise = exercises.find((ex) => ex.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (!exercise) {
+      try {
+        exercise = await api.workouts.addExercise({ name });
+        setExercises((prev) => [...prev, exercise].sort((a, b) => a.name.localeCompare(b.name)));
+      } catch {
+        return;
+      }
+    }
+    setSetForm((f) => ({ ...f, exercise_id: String(exercise.id) }));
+    registerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <div>
       <div className="page-header">
         <h1>Treino</h1>
       </div>
+
+      <RoutinePlan onUseExercise={useExerciseFromPlan} />
 
       <Card title="Evolução de carga">
         {exercises.length > 0 && (
@@ -117,6 +135,7 @@ export function Workouts() {
         </form>
       </Card>
 
+      <div ref={registerRef}>
       <Card title="Registrar treino">
         <div className="field">
           <label>Data</label>
@@ -160,6 +179,7 @@ export function Workouts() {
           Salvar treino ({pendingSets.length} séries)
         </button>
       </Card>
+      </div>
 
       <Card title="Últimos treinos">
         {sessions.length === 0 ? (
