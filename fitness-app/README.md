@@ -56,12 +56,73 @@ e use "Adicionar à tela de início" (Android/Chrome) ou "Adicionar à Tela de
 Início" no menu de compartilhamento (iOS/Safari). O app abre em tela cheia,
 como um app nativo.
 
+> No iPhone, notificações push só funcionam depois de instalado dessa forma
+> (o Safari sozinho, sem instalar, não recebe push) e a partir do iOS 16.4.
+
 ### Build de produção do frontend
 
 ```bash
 cd fitness-app/frontend
 npm run build
 ```
+
+Em produção, o backend serve automaticamente os arquivos de
+`frontend/dist` (veja `backend/src/index.js`) — não precisa de um servidor
+separado para o frontend.
+
+## Publicar de graça no Render
+
+O jeito mais simples de usar o app todo dia no celular é publicar num
+serviço com HTTPS. O plano gratuito do Render serve bem para uso pessoal,
+com uma ressalva: **o disco do plano free não é garantidamente
+persistente** — uma atualização de código pode apagar os dados salvos.
+Por isso o app tem a tela **Configurações → Backup**: baixe o backup de
+vez em quando (ou sempre antes de eu atualizar algo) para nunca depender
+só do disco do servidor.
+
+### Opção A — Blueprint (mais rápido)
+
+Este repositório já tem um `render.yaml` na raiz configurado para rodar o
+`fitness-app` como um único serviço (API + frontend juntos).
+
+1. Crie uma conta grátis em [render.com](https://render.com) e conecte sua
+   conta do GitHub.
+2. No painel, clique em **New +** → **Blueprint**.
+3. Selecione este repositório (`davirenan1-png/Gym`). O Render deve
+   detectar o `render.yaml` automaticamente.
+4. Confirme a criação do serviço `fitness-tracker` (plano **Free**).
+5. Aguarde o build (alguns minutos). A URL final aparece no painel, algo
+   como `https://fitness-tracker-xxxx.onrender.com`.
+
+Se o Render não conseguir importar o Blueprint por algum motivo, use a
+Opção B abaixo (configuração manual, mesmos valores).
+
+### Opção B — Serviço manual (se o Blueprint falhar)
+
+1. **New +** → **Web Service** → selecione o repositório.
+2. **Root Directory**: `fitness-app`
+3. **Runtime**: Node
+4. **Build Command**:
+   ```
+   npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend
+   ```
+5. **Start Command**:
+   ```
+   npm start --prefix backend
+   ```
+6. **Plan**: Free
+7. Criar o serviço e aguardar o deploy.
+
+### Depois de publicado
+
+- Abra a URL do Render no Safari do iPhone e use **Compartilhar → Adicionar
+  à Tela de Início**. O app passa a abrir em tela cheia, como um app nativo.
+- O plano free do Render "dorme" depois de ~15 min sem uso — a primeira
+  abertura do dia pode demorar uns 30-50 segundos para o servidor acordar.
+  Isso é normal do plano gratuito.
+- Sempre que eu (Claude) fizer uma atualização no app e você fizer o
+  redeploy, **baixe um backup antes** em Configurações, e restaure depois
+  se os dados sumirem.
 
 ## Estrutura
 

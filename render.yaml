@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: fitness-tracker
+    runtime: node
+    plan: free
+    rootDir: fitness-app
+    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: npm start --prefix backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.2

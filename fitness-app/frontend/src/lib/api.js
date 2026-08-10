@@ -56,6 +56,11 @@ export const api = {
     removeSession: (id) => request(`/workouts/sessions/${id}`, { method: 'DELETE' }),
   },
 
+  backup: {
+    export: () => request('/backup'),
+    import: (backup) => request('/backup', { method: 'POST', body: JSON.stringify(backup) }),
+  },
+
   routine: {
     list: () => request('/routine'),
     updateDay: (weekday, data) => request(`/routine/${weekday}`, { method: 'PUT', body: JSON.stringify(data) }),

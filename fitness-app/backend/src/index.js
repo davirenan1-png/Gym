@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import './db.js';
 import { router as settingsRouter } from './routes/settings.js';
 import { router as waterRouter } from './routes/water.js';
@@ -9,6 +12,7 @@ import { router as workoutsRouter } from './routes/workouts.js';
 import { router as routineRouter } from './routes/routine.js';
 import { router as jiujitsuRouter } from './routes/jiujitsu.js';
 import { router as dashboardRouter } from './routes/dashboard.js';
+import { router as backupRouter } from './routes/backup.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -25,6 +29,17 @@ app.use('/api/workouts', workoutsRouter);
 app.use('/api/routine', routineRouter);
 app.use('/api/jiujitsu', jiujitsuRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/backup', backupRouter);
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const frontendDist = join(__dirname, '..', '..', 'frontend', 'dist');
+
+if (existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get(/^\/(?!api\/).*/, (req, res) => {
+    res.sendFile(join(frontendDist, 'index.html'));
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error(err);

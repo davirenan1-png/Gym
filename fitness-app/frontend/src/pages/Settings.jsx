@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api } from '../lib/api.js';
 import { Card } from '../components/Card.jsx';
 
 export function Settings() {
   const [form, setForm] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [backupStatus, setBackupStatus] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     api.settings.get().then(setForm);
@@ -23,6 +25,33 @@ export function Settings() {
     setForm({ ...form, ...updated });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
+  }
+
+  async function downloadBackup() {
+    const backup = await api.backup.export();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-fitness-${backup.exported_at.slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function restoreBackup(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackupStatus('Restaurando...');
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      await api.backup.import(backup);
+      setBackupStatus('Backup restaurado ✓ Recarregue as outras telas para ver os dados.');
+    } catch {
+      setBackupStatus('Não deu pra restaurar esse arquivo. Confira se é um backup válido.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   }
 
   if (!form) return null;
@@ -73,6 +102,25 @@ export function Settings() {
             {saved ? 'Salvo ✓' : 'Salvar metas'}
           </button>
         </form>
+      </Card>
+
+      <Card title="Backup">
+        <p style={{ marginTop: 0 }}>
+          Baixe um arquivo com todos os seus dados de vez em quando — é sua rede de segurança
+          caso algo dê errado na hospedagem.
+        </p>
+        <div className="quick-actions">
+          <button className="btn" onClick={downloadBackup}>Baixar backup</button>
+          <button className="btn" onClick={() => fileInputRef.current?.click()}>Restaurar backup</button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            style={{ display: 'none' }}
+            onChange={restoreBackup}
+          />
+        </div>
+        {backupStatus && <p style={{ fontSize: '0.85rem' }}>{backupStatus}</p>}
       </Card>
 
       <Card title="Sobre">
