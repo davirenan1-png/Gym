@@ -90,6 +90,10 @@ Este repositório já tem um `render.yaml` na raiz configurado para rodar o
 2. No painel, clique em **New +** → **Blueprint**.
 3. Selecione este repositório (`davirenan1-png/Gym`). O Render deve
    detectar o `render.yaml` automaticamente.
+   ⚠️ **Importante**: o código está na branch `claude/fitness-diet-tracking-app-igw5lu`
+   (o repositório ainda não tem uma branch `main`). Confira/selecione essa
+   branch na tela de criação do serviço, senão o Render pode tentar usar
+   uma branch vazia ou errada.
 4. Confirme a criação do serviço `fitness-tracker` (plano **Free**).
 5. Aguarde o build (alguns minutos). A URL final aparece no painel, algo
    como `https://fitness-tracker-xxxx.onrender.com`.
@@ -100,7 +104,7 @@ Opção B abaixo (configuração manual, mesmos valores).
 ### Opção B — Serviço manual (se o Blueprint falhar)
 
 1. **New +** → **Web Service** → selecione o repositório.
-2. **Root Directory**: `fitness-app`
+2. **Branch**: `claude/fitness-diet-tracking-app-igw5lu` · **Root Directory**: `fitness-app`
 3. **Runtime**: Node
 4. **Build Command**:
    ```
