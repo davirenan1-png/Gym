@@ -69,7 +69,7 @@ export function Diet() {
       <DietPlan />
 
       <Card title="Evolução do peso">
-        <LineChart points={chartPoints} unit="kg" color="#34d399" />
+        <LineChart points={chartPoints} unit="kg" color="#f59e0b" />
         <form onSubmit={addWeight} style={{ marginTop: 12 }}>
           <div className="field-row">
             <div className="field" style={{ marginBottom: 0, flex: '0 0 110px' }}>

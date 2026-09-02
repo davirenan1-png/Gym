@@ -108,7 +108,7 @@ export function Workouts() {
               ))}
             </select>
             <div style={{ marginTop: 12 }}>
-              <LineChart points={progressPoints} unit="kg" color="#22d3ee" />
+              <LineChart points={progressPoints} unit="kg" color="#facc15" />
             </div>
           </>
         )}

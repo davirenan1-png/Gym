@@ -129,7 +129,7 @@ export function RoutinePlan({ onUseExercise }) {
       ) : (
         <>
           <h2 style={{ marginBottom: 4 }}>
-            {day.title} {isCurrent && <span className="badge" style={{ background: 'var(--accent)', color: '#062730' }}>hoje</span>}
+            {day.title} {isCurrent && <span className="badge" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>hoje</span>}
           </h2>
           {day.note && <p style={{ margin: '0 0 8px', fontSize: '0.85rem' }}>{day.note}</p>}
         </>

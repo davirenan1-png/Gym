@@ -193,7 +193,7 @@ export function Checkin() {
                 <div key={day.date} className="list-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>{WEEKDAY_SHORT_LABELS[weekdayKeyForDate(day.date)]} · {formatDate(day.date)}</strong>
-                    {day.checkin ? <span className="badge" style={{ background: 'var(--accent-2)', color: '#062730' }}>preenchido</span> : null}
+                    {day.checkin ? <span className="badge" style={{ background: 'var(--accent-2)', color: 'var(--on-accent)' }}>preenchido</span> : null}
                   </div>
                   <div className="list-item-meta">
                     {day.checkin

@@ -1,4 +1,4 @@
-export function LineChart({ points, color = '#22d3ee', height = 140, unit = '' }) {
+export function LineChart({ points, color = '#facc15', height = 140, unit = '' }) {
   if (!points || points.length === 0) {
     return <div className="chart-empty">Sem dados suficientes ainda</div>;
   }

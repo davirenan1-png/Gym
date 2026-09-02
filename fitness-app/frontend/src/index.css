@@ -1,14 +1,15 @@
 :root {
-  --bg: #0b1120;
-  --surface: #131c31;
-  --surface-2: #1a2540;
-  --border: #253352;
-  --text: #e7ecf7;
-  --text-dim: #93a0bd;
-  --accent: #22d3ee;
-  --accent-2: #34d399;
+  --bg: #0a0a0a;
+  --surface: #171717;
+  --surface-2: #262626;
+  --border: #3a3a3a;
+  --text: #fafaf5;
+  --text-dim: #a3a3a3;
+  --accent: #facc15;
+  --accent-2: #f59e0b;
   --warn: #fb923c;
   --danger: #f87171;
+  --on-accent: #1a1400;
   --radius: 16px;
   color-scheme: dark;
 }
@@ -173,7 +174,7 @@ button,
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #062730;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -202,6 +203,12 @@ textarea {
   border-radius: 10px;
   padding: 10px 12px;
   width: 100%;
+  accent-color: var(--accent);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: auto;
 }
 
 label {
@@ -301,7 +308,7 @@ label {
 .chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #062730;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
