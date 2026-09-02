@@ -13,6 +13,9 @@ import { router as routineRouter } from './routes/routine.js';
 import { router as jiujitsuRouter } from './routes/jiujitsu.js';
 import { router as dashboardRouter } from './routes/dashboard.js';
 import { router as backupRouter } from './routes/backup.js';
+import { router as dietplanRouter } from './routes/dietplan.js';
+import { router as protocolRouter } from './routes/protocol.js';
+import { router as checkinRouter } from './routes/checkin.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -30,6 +33,9 @@ app.use('/api/routine', routineRouter);
 app.use('/api/jiujitsu', jiujitsuRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/backup', backupRouter);
+app.use('/api/dietplan', dietplanRouter);
+app.use('/api/protocol', protocolRouter);
+app.use('/api/checkin', checkinRouter);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = join(__dirname, '..', '..', 'frontend', 'dist');

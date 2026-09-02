@@ -6,6 +6,8 @@ import { Diet } from './pages/Diet.jsx';
 import { Workouts } from './pages/Workouts.jsx';
 import { JiuJitsu } from './pages/JiuJitsu.jsx';
 import { Settings } from './pages/Settings.jsx';
+import { Protocol } from './pages/Protocol.jsx';
+import { Checkin } from './pages/Checkin.jsx';
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
           <Route path="/treino" element={<Workouts />} />
           <Route path="/jiujitsu" element={<JiuJitsu />} />
           <Route path="/config" element={<Settings />} />
+          <Route path="/protocolo" element={<Protocol />} />
+          <Route path="/diario" element={<Checkin />} />
         </Routes>
       </main>
       <BottomNav />

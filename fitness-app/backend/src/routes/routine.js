@@ -3,57 +3,92 @@ import { db } from '../db.js';
 
 export const router = Router();
 
-const WEEKDAYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+function getSetting(key) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : '';
+}
+
+function setSetting(key, value) {
+  db.prepare(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  ).run(key, value ?? '');
+}
 
 function fullRoutine() {
-  const days = db.prepare('SELECT * FROM routine_days ORDER BY sort_order ASC').all();
+  const days = db.prepare('SELECT * FROM routine_days ORDER BY position ASC').all();
   const exercisesByDay = db.prepare(
-    'SELECT * FROM routine_exercises WHERE weekday = ? ORDER BY sort_order ASC, id ASC'
+    'SELECT * FROM routine_exercises WHERE routine_day_id = ? ORDER BY sort_order ASC, id ASC'
   );
   for (const day of days) {
-    day.exercises = exercisesByDay.all(day.weekday);
+    day.exercises = exercisesByDay.all(day.id);
   }
-  const note = db.prepare('SELECT value FROM settings WHERE key = ?').get('routine_general_note');
-  return { days, general_note: note ? note.value : '' };
+  return {
+    days,
+    cycle_position: Number(getSetting('cycle_position')) || 0,
+    principles_note: getSetting('routine_principles_note'),
+    extras_note: getSetting('routine_extras_note'),
+  };
 }
 
 router.get('/', (req, res) => {
   res.json(fullRoutine());
 });
 
-router.put('/note', (req, res) => {
-  const { note } = req.body;
-  db.prepare(
-    "INSERT INTO settings (key, value) VALUES ('routine_general_note', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-  ).run(note || '');
-  res.json({ general_note: note || '' });
+router.put('/advance', (req, res) => {
+  const days = db.prepare('SELECT position FROM routine_days ORDER BY position ASC').all();
+  if (days.length === 0) return res.status(400).json({ error: 'Nenhum dia cadastrado no ciclo' });
+  const current = Number(getSetting('cycle_position')) || 0;
+  const maxPosition = days[days.length - 1].position;
+  const positions = days.map((d) => d.position);
+  const idx = positions.indexOf(current);
+  const next = idx === -1 || idx === positions.length - 1 ? positions[0] : positions[idx + 1];
+  setSetting('cycle_position', String(next));
+  res.json({ cycle_position: next, max_position: maxPosition });
 });
 
-router.put('/:weekday', (req, res) => {
-  const { weekday } = req.params;
-  if (!WEEKDAYS.includes(weekday)) return res.status(400).json({ error: 'weekday inválido' });
-  const { title, note } = req.body;
-  const day = db.prepare('SELECT * FROM routine_days WHERE weekday = ?').get(weekday);
+router.put('/position', (req, res) => {
+  const { position } = req.body;
+  if (position === undefined || position === null) {
+    return res.status(400).json({ error: 'position é obrigatório' });
+  }
+  setSetting('cycle_position', String(position));
+  res.json({ cycle_position: Number(position) });
+});
+
+router.put('/notes', (req, res) => {
+  const { principles_note, extras_note } = req.body;
+  if (principles_note !== undefined) setSetting('routine_principles_note', principles_note);
+  if (extras_note !== undefined) setSetting('routine_extras_note', extras_note);
+  res.json({
+    principles_note: getSetting('routine_principles_note'),
+    extras_note: getSetting('routine_extras_note'),
+  });
+});
+
+router.put('/days/:id', (req, res) => {
+  const day = db.prepare('SELECT * FROM routine_days WHERE id = ?').get(req.params.id);
   if (!day) return res.status(404).json({ error: 'Dia não encontrado' });
-  db.prepare('UPDATE routine_days SET title = ?, note = ? WHERE weekday = ?').run(
+  const { title, note, is_training } = req.body;
+  db.prepare('UPDATE routine_days SET title = ?, note = ?, is_training = ? WHERE id = ?').run(
     title ?? day.title,
     note === undefined ? day.note : note,
-    weekday
+    is_training === undefined ? day.is_training : (is_training ? 1 : 0),
+    req.params.id
   );
-  res.json(db.prepare('SELECT * FROM routine_days WHERE weekday = ?').get(weekday));
+  res.json(db.prepare('SELECT * FROM routine_days WHERE id = ?').get(req.params.id));
 });
 
-router.post('/:weekday/exercises', (req, res) => {
-  const { weekday } = req.params;
-  if (!WEEKDAYS.includes(weekday)) return res.status(400).json({ error: 'weekday inválido' });
+router.post('/days/:id/exercises', (req, res) => {
+  const day = db.prepare('SELECT * FROM routine_days WHERE id = ?').get(req.params.id);
+  if (!day) return res.status(404).json({ error: 'Dia não encontrado' });
   const { name, sets_reps, notes } = req.body;
   if (!name) return res.status(400).json({ error: 'name é obrigatório' });
   const maxOrder = db
-    .prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM routine_exercises WHERE weekday = ?')
-    .get(weekday).m;
+    .prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM routine_exercises WHERE routine_day_id = ?')
+    .get(req.params.id).m;
   const info = db
-    .prepare('INSERT INTO routine_exercises (weekday, sort_order, name, sets_reps, notes) VALUES (?, ?, ?, ?, ?)')
-    .run(weekday, maxOrder + 1, name, sets_reps || null, notes || null);
+    .prepare('INSERT INTO routine_exercises (routine_day_id, sort_order, name, sets_reps, notes) VALUES (?, ?, ?, ?, ?)')
+    .run(req.params.id, maxOrder + 1, name, sets_reps || null, notes || null);
   res.status(201).json(db.prepare('SELECT * FROM routine_exercises WHERE id = ?').get(info.lastInsertRowid));
 });
 

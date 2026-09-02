@@ -16,6 +16,13 @@ const TABLES = [
   'belt_history',
   'routine_days',
   'routine_exercises',
+  'diet_plan_meals',
+  'diet_plan_items',
+  'supplements',
+  'supplement_logs',
+  'ergogenic_items',
+  'ergogenic_logs',
+  'checkin_logs',
 ];
 
 router.get('/', (req, res) => {

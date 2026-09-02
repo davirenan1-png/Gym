@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { todayKey, formatDate, todayWeekdayKey, BELT_LABELS, BELT_COLORS } from '../lib/format.js';
+import { todayKey, formatDate, BELT_LABELS, BELT_COLORS } from '../lib/format.js';
 import { Card } from '../components/Card.jsx';
 import { ProgressBar } from '../components/ProgressBar.jsx';
 
@@ -8,13 +9,17 @@ export function Today() {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const [todayPlan, setTodayPlan] = useState(null);
+  const [supplements, setSupplements] = useState([]);
+  const [checkinDone, setCheckinDone] = useState(false);
   const date = todayKey();
 
   const load = useCallback(() => {
     api.dashboard(date).then(setData).catch(() => {});
     api.routine.list().then((r) => {
-      setTodayPlan(r.days.find((d) => d.weekday === todayWeekdayKey()) || null);
+      setTodayPlan(r.days.find((d) => d.position === r.cycle_position) || null);
     });
+    api.protocol.supplements(date).then((r) => setSupplements(r.supplements));
+    api.checkin.today(date).then((r) => setCheckinDone(!!r.checkin));
   }, [date]);
 
   useEffect(() => {
@@ -29,6 +34,11 @@ export function Today() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function toggleSupplement(id) {
+    await api.protocol.toggleSupplement(id, date);
+    api.protocol.supplements(date).then((r) => setSupplements(r.supplements));
   }
 
   if (!data) return null;
@@ -102,6 +112,40 @@ export function Today() {
             <div className="stat-label">Jiu-Jitsu</div>
           </div>
         </div>
+      </Card>
+
+      <Card
+        title="💊 Suplementos"
+        action={<Link className="btn btn-sm" to="/protocolo">Protocolo</Link>}
+      >
+        {supplements.length === 0 ? (
+          <p className="empty-hint">Nenhum suplemento cadastrado.</p>
+        ) : (
+          <div className="list">
+            {supplements.map((s) => (
+              <label key={s.id} className="list-item" style={{ cursor: 'pointer' }}>
+                <span>
+                  <input
+                    type="checkbox"
+                    checked={s.taken}
+                    onChange={() => toggleSupplement(s.id)}
+                    style={{ width: 'auto', marginRight: 8 }}
+                  />
+                  {s.name}
+                </span>
+                <span className="list-item-meta">{s.dose_note}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card title="📝 Diário do dia" action={<Link className="btn btn-sm" to="/diario">Abrir</Link>}>
+        <p style={{ margin: 0 }}>
+          {checkinDone
+            ? '✅ Você já preencheu o check-in de hoje.'
+            : 'Ainda não preencheu o check-in de hoje — leva menos de 1 minuto.'}
+        </p>
       </Card>
 
       <Card title="⚖️ Peso & Faixa">

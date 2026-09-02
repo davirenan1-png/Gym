@@ -1,21 +1,37 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api.js';
-import { WEEKDAYS, WEEKDAY_SHORT_LABELS, todayWeekdayKey } from '../lib/format.js';
 import { Card } from './Card.jsx';
 
 const emptyNewExercise = { name: '', sets_reps: '', notes: '' };
 
+function NoteList({ text }) {
+  const lines = (text || '').split('\n').filter(Boolean);
+  if (lines.length === 0) return null;
+  return (
+    <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: '0.78rem' }}>
+      {lines.map((line, i) => (
+        <li key={i} style={{ marginBottom: 2 }}>{line}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function RoutinePlan({ onUseExercise }) {
   const [days, setDays] = useState(null);
-  const [generalNote, setGeneralNote] = useState('');
-  const [selected, setSelected] = useState(todayWeekdayKey());
+  const [cyclePosition, setCyclePosition] = useState(0);
+  const [principlesNote, setPrinciplesNote] = useState('');
+  const [extrasNote, setExtrasNote] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [newExercise, setNewExercise] = useState(emptyNewExercise);
 
   const load = useCallback(() => {
     api.routine.list().then((data) => {
       setDays(data.days);
-      setGeneralNote(data.general_note || '');
+      setCyclePosition(data.cycle_position);
+      setPrinciplesNote(data.principles_note || '');
+      setExtrasNote(data.extras_note || '');
+      setSelectedPosition((prev) => (prev === null ? data.cycle_position : prev));
     });
   }, []);
 
@@ -25,11 +41,11 @@ export function RoutinePlan({ onUseExercise }) {
 
   if (!days) return null;
 
-  const day = days.find((d) => d.weekday === selected);
-  const today = todayWeekdayKey();
+  const day = days.find((d) => d.position === selectedPosition) || days[0];
+  const isCurrent = day.position === cyclePosition;
 
   function updateLocalItem(id, patch) {
-    setDays(days.map((d) => (d.weekday !== selected ? d : {
+    setDays(days.map((d) => (d.id !== day.id ? d : {
       ...d,
       exercises: d.exercises.map((ex) => (ex.id === id ? { ...ex, ...patch } : ex)),
     })));
@@ -50,25 +66,36 @@ export function RoutinePlan({ onUseExercise }) {
 
   async function saveDayInfo(patch) {
     const updated = { ...day, ...patch };
-    setDays(days.map((d) => (d.weekday !== selected ? d : updated)));
-    await api.routine.updateDay(selected, { title: updated.title, note: updated.note });
+    setDays(days.map((d) => (d.id !== day.id ? d : updated)));
+    await api.routine.updateDay(day.id, { title: updated.title, note: updated.note });
   }
 
   async function addExercise(e) {
     e.preventDefault();
     if (!newExercise.name) return;
-    await api.routine.addExercise(selected, newExercise);
+    await api.routine.addExercise(day.id, newExercise);
     setNewExercise(emptyNewExercise);
     load();
   }
 
-  async function saveGeneralNote() {
-    await api.routine.updateNote(generalNote);
+  async function advance() {
+    const res = await api.routine.advance();
+    setCyclePosition(res.cycle_position);
+    setSelectedPosition(res.cycle_position);
+  }
+
+  async function markAsToday() {
+    await api.routine.setPosition(day.position);
+    setCyclePosition(day.position);
+  }
+
+  async function saveNotes() {
+    await api.routine.updateNotes({ principles_note: principlesNote, extras_note: extrasNote });
   }
 
   return (
     <Card
-      title="📅 Plano da semana"
+      title="🔁 Plano do ciclo"
       action={
         <button className="btn btn-sm" onClick={() => setEditMode(!editMode)}>
           {editMode ? 'Concluir' : 'Editar'}
@@ -76,14 +103,14 @@ export function RoutinePlan({ onUseExercise }) {
       }
     >
       <div className="chip-row">
-        {WEEKDAYS.map((w) => (
+        {days.map((d) => (
           <button
-            key={w}
-            className={`chip${selected === w ? ' active' : ''}`}
-            onClick={() => setSelected(w)}
+            key={d.id}
+            className={`chip${selectedPosition === d.position ? ' active' : ''}`}
+            onClick={() => setSelectedPosition(d.position)}
           >
-            {WEEKDAY_SHORT_LABELS[w]}
-            {w === today ? ' •' : ''}
+            {d.title}
+            {d.position === cyclePosition ? ' •' : ''}
           </button>
         ))}
       </div>
@@ -101,12 +128,17 @@ export function RoutinePlan({ onUseExercise }) {
         </div>
       ) : (
         <>
-          <h2 style={{ marginBottom: 4 }}>{day.title}</h2>
+          <h2 style={{ marginBottom: 4 }}>
+            {day.title} {isCurrent && <span className="badge" style={{ background: 'var(--accent)', color: '#062730' }}>hoje</span>}
+          </h2>
           {day.note && <p style={{ margin: '0 0 8px', fontSize: '0.85rem' }}>{day.note}</p>}
         </>
       )}
 
-      {day.exercises.length === 0 && !editMode && (
+      {!day.is_training && !editMode && (
+        <p className="empty-hint">Dia de descanso — sem exercícios de musculação.</p>
+      )}
+      {day.is_training === 1 && day.exercises.length === 0 && !editMode && (
         <p className="empty-hint">Sem exercícios planejados para este dia.</p>
       )}
 
@@ -155,7 +187,7 @@ export function RoutinePlan({ onUseExercise }) {
         )}
       </div>
 
-      {editMode && (
+      {editMode && day.is_training === 1 && (
         <form onSubmit={addExercise} style={{ marginTop: 12 }}>
           <div className="field-row">
             <input
@@ -173,13 +205,36 @@ export function RoutinePlan({ onUseExercise }) {
         </form>
       )}
 
+      {!editMode && (
+        <div className="quick-actions" style={{ marginTop: 12 }}>
+          {isCurrent ? (
+            <button className="btn btn-primary btn-block" onClick={advance}>
+              ✅ Concluí — avançar pro próximo dia
+            </button>
+          ) : (
+            <button className="btn btn-block" onClick={markAsToday}>
+              Marcar &quot;{day.title}&quot; como hoje
+            </button>
+          )}
+        </div>
+      )}
+
       {editMode ? (
-        <div className="field" style={{ marginTop: 12 }}>
-          <label>Observação geral (todos os dias)</label>
-          <input value={generalNote} onChange={(e) => setGeneralNote(e.target.value)} onBlur={saveGeneralNote} />
+        <div style={{ marginTop: 12 }}>
+          <div className="field">
+            <label>Princípios (uma linha por item)</label>
+            <textarea rows="4" value={principlesNote} onChange={(e) => setPrinciplesNote(e.target.value)} onBlur={saveNotes} />
+          </div>
+          <div className="field">
+            <label>Abs / panturrilha / cardio (uma linha por item)</label>
+            <textarea rows="3" value={extrasNote} onChange={(e) => setExtrasNote(e.target.value)} onBlur={saveNotes} />
+          </div>
         </div>
       ) : (
-        generalNote && <p style={{ marginTop: 12, fontSize: '0.78rem' }}>💡 {generalNote}</p>
+        <>
+          <NoteList text={principlesNote} />
+          <NoteList text={extrasNote} />
+        </>
       )}
     </Card>
   );

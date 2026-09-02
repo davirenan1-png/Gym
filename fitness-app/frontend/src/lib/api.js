@@ -63,11 +63,43 @@ export const api = {
 
   routine: {
     list: () => request('/routine'),
-    updateDay: (weekday, data) => request(`/routine/${weekday}`, { method: 'PUT', body: JSON.stringify(data) }),
-    updateNote: (note) => request('/routine/note', { method: 'PUT', body: JSON.stringify({ note }) }),
-    addExercise: (weekday, data) => request(`/routine/${weekday}/exercises`, { method: 'POST', body: JSON.stringify(data) }),
+    advance: () => request('/routine/advance', { method: 'PUT' }),
+    setPosition: (position) => request('/routine/position', { method: 'PUT', body: JSON.stringify({ position }) }),
+    updateNotes: (data) => request('/routine/notes', { method: 'PUT', body: JSON.stringify(data) }),
+    updateDay: (id, data) => request(`/routine/days/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    addExercise: (dayId, data) => request(`/routine/days/${dayId}/exercises`, { method: 'POST', body: JSON.stringify(data) }),
     updateExercise: (id, data) => request(`/routine/exercises/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     removeExercise: (id) => request(`/routine/exercises/${id}`, { method: 'DELETE' }),
+  },
+
+  dietPlan: {
+    get: () => request('/dietplan'),
+    updateNotes: (general_notes) => request('/dietplan/notes', { method: 'PUT', body: JSON.stringify({ general_notes }) }),
+    updateMeal: (id, data) => request(`/dietplan/meals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    addItem: (mealId, description) => request(`/dietplan/meals/${mealId}/items`, { method: 'POST', body: JSON.stringify({ description }) }),
+    updateItem: (id, description) => request(`/dietplan/items/${id}`, { method: 'PUT', body: JSON.stringify({ description }) }),
+    removeItem: (id) => request(`/dietplan/items/${id}`, { method: 'DELETE' }),
+  },
+
+  protocol: {
+    supplements: (date) => request(`/protocol/supplements${date ? `?date=${date}` : ''}`),
+    addSupplement: (data) => request('/protocol/supplements', { method: 'POST', body: JSON.stringify(data) }),
+    updateSupplement: (id, data) => request(`/protocol/supplements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    removeSupplement: (id) => request(`/protocol/supplements/${id}`, { method: 'DELETE' }),
+    toggleSupplement: (id, date) => request(`/protocol/supplements/${id}/toggle`, { method: 'POST', body: JSON.stringify({ date }) }),
+    ergogenics: () => request('/protocol/ergogenics'),
+    addErgogenic: (data) => request('/protocol/ergogenics', { method: 'POST', body: JSON.stringify(data) }),
+    updateErgogenic: (id, data) => request(`/protocol/ergogenics/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    removeErgogenic: (id) => request(`/protocol/ergogenics/${id}`, { method: 'DELETE' }),
+    ergogenicLogs: (limit) => request(`/protocol/ergogenics/logs${limit ? `?limit=${limit}` : ''}`),
+    addErgogenicLog: (id, data) => request(`/protocol/ergogenics/${id}/logs`, { method: 'POST', body: JSON.stringify(data) }),
+    removeErgogenicLog: (id) => request(`/protocol/ergogenics/logs/${id}`, { method: 'DELETE' }),
+  },
+
+  checkin: {
+    today: (date) => request(`/checkin/today${date ? `?date=${date}` : ''}`),
+    save: (data) => request('/checkin', { method: 'POST', body: JSON.stringify(data) }),
+    week: (start) => request(`/checkin/week${start ? `?start=${start}` : ''}`),
   },
 
   jiujitsu: {

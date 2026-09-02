@@ -70,7 +70,20 @@ export const WEEKDAY_SHORT_LABELS = {
   domingo: 'Dom',
 };
 
+const BY_JS_DAY = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
 export function todayWeekdayKey() {
-  const byJsDay = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-  return byJsDay[new Date(todayKey()).getUTCDay()];
+  return BY_JS_DAY[new Date(todayKey()).getUTCDay()];
+}
+
+export function weekdayKeyForDate(dateStr) {
+  return BY_JS_DAY[new Date(`${dateStr}T00:00:00Z`).getUTCDay()];
+}
+
+export function mondayOfWeek(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  const jsDay = d.getUTCDay();
+  const diff = jsDay === 0 ? -6 : 1 - jsDay;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
 }

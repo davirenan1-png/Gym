@@ -15,16 +15,26 @@ como PWA no celular ("Adicionar à tela de início").
   se já treinou musculação/jiu-jitsu, último peso registrado e faixa atual.
 - **Água**: botões rápidos (+200/250/500/1L ml) ou valor customizado, meta
   diária configurável, histórico dos últimos 14 dias.
-- **Dieta**: registro de refeições (café/almoço/jantar/lanche/outro) com
-  calorias e macros, e evolução do peso corporal com gráfico.
-- **Treino**: catálogo de exercícios, registro de sessão com séries
-  (repetições × carga) e gráfico de evolução de carga por exercício
-  (progressive overload).
+- **Dieta**: plano alimentar prescrito (dias de treino x dias de descanso,
+  refeições e itens editáveis) + registro livre de refeições com calorias e
+  macros, e evolução do peso corporal com gráfico.
+- **Treino**: plano de treino em ciclo (ex: 3 dias de treino + 1 de
+  descanso, repetindo — não fixo por dia da semana), com botão para marcar
+  o treino do dia como concluído e avançar pro próximo; catálogo de
+  exercícios, registro de sessão com séries (repetições × carga) e gráfico
+  de evolução de carga por exercício (progressive overload).
 - **Jiu-Jitsu**: registro de sessão (gi/no-gi, foco: aula/drilling/
   sparring/competição, duração, rounds, intensidade, notas de técnica),
   estatísticas (dias seguidos treinando, sessões nos últimos 30 dias) e
   histórico de faixa/graus.
-- **Configurações**: metas diárias de água, calorias, macros e peso.
+- **Protocolo**: checklist diário de suplementos e registro de aplicações
+  de ergogênicos (substância, dose, data), com histórico.
+- **Diário**: check-in diário (adesão ao plano, peso em jejum, sono, humor,
+  performance no treino, digestão, passos, qualidade das fezes,
+  comentários) e resumo da semana com botão para copiar o texto pronto
+  para enviar ao coach.
+- **Configurações**: metas diárias de água, calorias, macros e peso; backup
+  completo dos dados (exportar/restaurar).
 
 ## Como rodar localmente
 

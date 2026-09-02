@@ -3,6 +3,7 @@ import { api } from '../lib/api.js';
 import { todayKey, formatDate, MEAL_LABELS } from '../lib/format.js';
 import { Card } from '../components/Card.jsx';
 import { LineChart } from '../components/LineChart.jsx';
+import { DietPlan } from '../components/DietPlan.jsx';
 
 const emptyMeal = { meal_type: 'cafe', description: '', calories: '', protein_g: '', carbs_g: '', fat_g: '' };
 
@@ -64,6 +65,8 @@ export function Diet() {
         <h1>Dieta</h1>
         <span className="page-date">{formatDate(date)}</span>
       </div>
+
+      <DietPlan />
 
       <Card title="Evolução do peso">
         <LineChart points={chartPoints} unit="kg" color="#34d399" />
