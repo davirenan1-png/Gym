@@ -102,6 +102,21 @@ export const api = {
     week: (start) => request(`/checkin/week${start ? `?start=${start}` : ''}`),
   },
 
+  push: {
+    vapidPublicKey: () => request('/push/vapid-public-key'),
+    subscribe: (subscription) => request('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
+    unsubscribe: (endpoint) => request('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+    status: () => request('/push/status'),
+    test: () => request('/push/test', { method: 'POST' }),
+  },
+
+  reminders: {
+    list: () => request('/reminders'),
+    add: (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/reminders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id) => request(`/reminders/${id}`, { method: 'DELETE' }),
+  },
+
   jiujitsu: {
     sessions: (limit) => request(`/jiujitsu/sessions${limit ? `?limit=${limit}` : ''}`),
     addSession: (data) => request('/jiujitsu/sessions', { method: 'POST', body: JSON.stringify(data) }),

@@ -16,6 +16,8 @@ import { router as backupRouter } from './routes/backup.js';
 import { router as dietplanRouter } from './routes/dietplan.js';
 import { router as protocolRouter } from './routes/protocol.js';
 import { router as checkinRouter } from './routes/checkin.js';
+import { router as pushRouter } from './routes/push.js';
+import { router as remindersRouter } from './routes/reminders.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -36,6 +38,8 @@ app.use('/api/backup', backupRouter);
 app.use('/api/dietplan', dietplanRouter);
 app.use('/api/protocol', protocolRouter);
 app.use('/api/checkin', checkinRouter);
+app.use('/api/push', pushRouter);
+app.use('/api/reminders', remindersRouter);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDist = join(__dirname, '..', '..', 'frontend', 'dist');

@@ -172,6 +172,25 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    body TEXT,
+    time TEXT NOT NULL,
+    days TEXT NOT NULL DEFAULT 'all',
+    active INTEGER NOT NULL DEFAULT 1,
+    last_sent_date TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE INDEX IF NOT EXISTS idx_water_date ON water_logs(date);
   CREATE INDEX IF NOT EXISTS idx_food_date ON food_logs(date);
   CREATE INDEX IF NOT EXISTS idx_workout_sessions_date ON workout_sessions(date);
@@ -491,6 +510,35 @@ if (ergogenicCount === 0) {
   );
   const seedTx = db.transaction(() => {
     ergogenicSeed.forEach((e, i) => insertErg.run(e.substance, e.dose_note, e.application_note, e.start_date, i));
+  });
+  seedTx();
+}
+
+const remindersSeed = [
+  { title: '💧 Água', body: 'Bebeu água nas últimas horas?', time: '10:00', days: 'all' },
+  { title: '💧 Água', body: 'Hora de beber água.', time: '15:00', days: 'all' },
+  { title: '💧 Água', body: 'Fecha a meta de água de hoje.', time: '20:00', days: 'all' },
+  { title: '💊 Suplementos', body: 'Hora dos suplementos da manhã.', time: '08:00', days: 'all' },
+  { title: '🍽️ Refeição 1', body: 'Café da manhã — hora de comer.', time: '07:30', days: 'all' },
+  { title: '🍽️ Refeição 2', body: 'Hora da refeição 2.', time: '12:00', days: 'all' },
+  { title: '🍽️ Refeição 3', body: 'Hora da refeição 3.', time: '15:30', days: 'all' },
+  { title: '🍽️ Refeição 4', body: 'Hora da refeição 4.', time: '19:00', days: 'all' },
+  { title: '🍽️ Refeição 5', body: 'Hora da refeição 5.', time: '21:30', days: 'all' },
+  {
+    title: '📸 Check-in com o coach',
+    body: 'Tire as fotos e preencha o Diário antes das 9h.',
+    time: '08:00',
+    days: 'segunda',
+  },
+];
+
+const remindersCount = db.prepare('SELECT COUNT(*) AS c FROM reminders').get().c;
+if (remindersCount === 0) {
+  const insertReminder = db.prepare(
+    'INSERT INTO reminders (title, body, time, days, sort_order) VALUES (?, ?, ?, ?, ?)'
+  );
+  const seedTx = db.transaction(() => {
+    remindersSeed.forEach((r, i) => insertReminder.run(r.title, r.body, r.time, r.days, i));
   });
   seedTx();
 }

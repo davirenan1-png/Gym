@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../lib/api.js';
 import { Card } from '../components/Card.jsx';
+import { NotificationsSection } from '../components/NotificationsSection.jsx';
 
 export function Settings() {
   const [form, setForm] = useState(null);
@@ -103,6 +104,8 @@ export function Settings() {
           </button>
         </form>
       </Card>
+
+      <NotificationsSection />
 
       <Card title="Backup">
         <p style={{ marginTop: 0 }}>

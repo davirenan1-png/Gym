@@ -23,6 +23,8 @@ const TABLES = [
   'ergogenic_items',
   'ergogenic_logs',
   'checkin_logs',
+  'push_subscriptions',
+  'reminders',
 ];
 
 router.get('/', (req, res) => {

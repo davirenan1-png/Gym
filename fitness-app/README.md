@@ -33,8 +33,10 @@ como PWA no celular ("Adicionar à tela de início").
   performance no treino, digestão, passos, qualidade das fezes,
   comentários) e resumo da semana com botão para copiar o texto pronto
   para enviar ao coach.
-- **Configurações**: metas diárias de água, calorias, macros e peso; backup
-  completo dos dados (exportar/restaurar).
+- **Configurações**: metas diárias de água, calorias, macros e peso;
+  notificações push (ativar/testar) e lembretes configuráveis (água,
+  refeições, suplementos, check-in com o coach); backup completo dos
+  dados (exportar/restaurar).
 
 ## Como rodar localmente
 
@@ -138,37 +140,82 @@ Opção B abaixo (configuração manual, mesmos valores).
   redeploy, **baixe um backup antes** em Configurações, e restaure depois
   se os dados sumirem.
 
+## Notificações push e lembretes
+
+O app manda notificação push de verdade (água, refeições, suplementos,
+check-in com o coach), configurável em **Configurações → Lembretes**. Duas
+coisas precisam estar certas pra isso funcionar:
+
+### 1. Ativar no celular
+
+Em **Configurações → Notificações**, toque em "Ativar notificações". No
+iPhone isso só funciona depois de instalado ("Adicionar à Tela de
+Início") e abrindo o app por esse ícone — não pelo Safari direto. Use o
+botão "Enviar teste" pra confirmar que chegou.
+
+### 2. Manter os lembretes disparando mesmo com o servidor "dormindo"
+
+O plano free do Render dorme sem uso — sozinho, o app não teria como
+"acordar" no horário certo pra mandar a notificação. A solução é um
+serviço externo grátis que acessa uma URL do app de tempos em tempos,
+o que já acorda o servidor e dispara os lembretes que estiverem no horário:
+
+1. Crie uma conta grátis em [cron-job.org](https://cron-job.org)
+2. Crie um novo cronjob apontando para:
+   `https://SEU-APP.onrender.com/api/push/tick`
+   (troque pela URL real do seu serviço no Render)
+3. Configure para rodar a cada 5-15 minutos
+4. Salve e ative
+
+Cada chamada verifica os lembretes cadastrados e manda notificação pra
+quem já ativou (passo 1) e ainda não recebeu aquele lembrete hoje —
+não importa se o cronjob atrasa alguns minutos, ele não manda duplicado.
+
+Opcional: para evitar que outra pessoa dispare seus lembretes manualmente,
+defina uma variável de ambiente `CRON_SECRET` no Render (Settings →
+Environment) e adicione `?token=SEU_SECRET` no final da URL do cronjob.
+
+### Alternativa sem depender do servidor: Atalhos do iPhone
+
+Se preferir não configurar o cron-job.org, o app **Atalhos** do iPhone
+cria alarmes 100% locais (não dependem do Render estar acordado) via
+Automação Pessoal → Horário → Notificação. Menos "inteligente" (não sabe
+se você já bebeu água ou não), mas nunca falha.
+
 ## Estrutura
 
 ```
 fitness-app/
   backend/
     src/
-      db.js              # schema SQLite (settings, water_logs,
-                          #   body_weight_logs, food_logs, exercises,
-                          #   workout_sessions, workout_sets,
-                          #   jiujitsu_sessions, belt_history)
+      db.js               # schema SQLite + seeds de todo o app
+      lib/
+        push.js             # VAPID, envio de push
       routes/
-        settings.js        # metas diárias (água, calorias, macros, peso)
-        water.js             # log de água + histórico
-        weight.js              # log de peso corporal
-        nutrition.js             # log de refeições
-        workouts.js                # exercícios, sessões, séries, progressão
-        jiujitsu.js                  # sessões, estatísticas, faixa
-        dashboard.js                  # resumo consolidado do dia
-      index.js              # servidor Express
+        settings.js         # metas diárias
+        water.js               # log de água + histórico
+        weight.js                # log de peso corporal
+        nutrition.js              # log de refeições
+        workouts.js                 # exercícios, sessões, séries, progressão
+        routine.js                    # plano de treino em ciclo
+        dietplan.js                     # plano alimentar prescrito
+        protocol.js                       # suplementos + ergogênicos
+        checkin.js                          # diário / check-in semanal
+        jiujitsu.js                           # sessões, estatísticas, faixa
+        push.js                                 # assinatura + tick de notificações
+        reminders.js                              # CRUD de lembretes
+        dashboard.js                                # resumo do dia
+        backup.js                                     # exportar/restaurar tudo
+      index.js              # servidor Express (serve a API e o build do frontend)
   frontend/
     src/
-      pages/
-        Today.jsx           # painel "Hoje"
-        Water.jsx             # água
-        Diet.jsx                # dieta + peso
-        Workouts.jsx              # musculação
-        JiuJitsu.jsx                # jiu-jitsu
-        Settings.jsx                 # metas
-      components/            # Card, ProgressBar, LineChart, BottomNav
-      lib/                    # cliente de API e formatação
+      pages/                # Today, Water, Diet, Workouts, JiuJitsu, Protocol,
+                             #   Checkin, Settings — uma por rota
+      components/            # Card, ProgressBar, LineChart, BottomNav,
+                              #   RoutinePlan, DietPlan, NotificationsSection
+      lib/                    # cliente de API, formatação, push (frontend)
     public/
       manifest.webmanifest    # instalação como PWA
+      sw.js                    # service worker (cache + push)
       sw.js                     # service worker (cache do app shell)
 ```
