@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api.js';
+import { todayKey } from '../lib/format.js';
 import { Card } from './Card.jsx';
 
 export function DietPlan() {
@@ -8,17 +9,18 @@ export function DietPlan() {
   const [planType, setPlanType] = useState('treino');
   const [editMode, setEditMode] = useState(false);
   const [newItemText, setNewItemText] = useState({});
+  const date = todayKey();
 
   const load = useCallback(() => {
-    api.dietPlan.get().then((data) => {
+    api.dietPlan.get(date).then((data) => {
       setPlan(data);
       setGeneralNotes(data.general_notes || '');
     });
-    api.routine.list().then((r) => {
+    api.routine.list(date).then((r) => {
       const day = r.days.find((d) => d.position === r.cycle_position);
       if (day) setPlanType(day.is_training ? 'treino' : 'descanso');
     });
-  }, []);
+  }, [date]);
 
   useEffect(() => {
     load();
@@ -27,6 +29,13 @@ export function DietPlan() {
   if (!plan) return null;
 
   const meals = plan[planType] || [];
+  const doneCount = meals.filter((m) => m.done).length;
+
+  async function toggleMeal(meal) {
+    const updated = plan[planType].map((m) => (m.id === meal.id ? { ...m, done: !m.done } : m));
+    setPlan({ ...plan, [planType]: updated });
+    await api.dietPlan.toggleMeal(meal.id, date);
+  }
 
   function updateLocalMeal(id, patch) {
     setPlan({
@@ -87,6 +96,12 @@ export function DietPlan() {
         </button>
       </div>
 
+      {!editMode && meals.length > 0 && (
+        <p style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          {doneCount}/{meals.length} refeições feitas hoje
+        </p>
+      )}
+
       <div className="list">
         {meals.map((meal) => (
           <div key={meal.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>
@@ -98,7 +113,15 @@ export function DietPlan() {
                 style={{ fontWeight: 600 }}
               />
             ) : (
-              <strong>{meal.label}</strong>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={!!meal.done}
+                  onChange={() => toggleMeal(meal)}
+                  style={{ width: 'auto', marginRight: 8 }}
+                />
+                {meal.label}
+              </label>
             )}
 
             <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>

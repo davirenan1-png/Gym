@@ -76,7 +76,9 @@ export function JiuJitsu() {
               >
                 {BELT_LABELS[currentBelt.belt]}
               </span>
-              <span style={{ marginLeft: 8 }}>{currentBelt.stripes} graus</span>
+              {currentBelt.stripes > 0 && (
+                <span style={{ marginLeft: 8 }}>{currentBelt.stripes} grau{currentBelt.stripes > 1 ? 's' : ''}</span>
+              )}
               <div className="list-item-meta">desde {formatDate(currentBelt.date_achieved)}</div>
             </div>
             <button className="btn btn-sm" onClick={() => setShowBeltForm(!showBeltForm)}>Atualizar</button>

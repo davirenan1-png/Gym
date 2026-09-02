@@ -62,9 +62,7 @@ export const api = {
   },
 
   routine: {
-    list: () => request('/routine'),
-    advance: () => request('/routine/advance', { method: 'PUT' }),
-    setPosition: (position) => request('/routine/position', { method: 'PUT', body: JSON.stringify({ position }) }),
+    list: (date) => request(`/routine${date ? `?date=${date}` : ''}`),
     updateNotes: (data) => request('/routine/notes', { method: 'PUT', body: JSON.stringify(data) }),
     updateDay: (id, data) => request(`/routine/days/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     addExercise: (dayId, data) => request(`/routine/days/${dayId}/exercises`, { method: 'POST', body: JSON.stringify(data) }),
@@ -73,12 +71,13 @@ export const api = {
   },
 
   dietPlan: {
-    get: () => request('/dietplan'),
+    get: (date) => request(`/dietplan${date ? `?date=${date}` : ''}`),
     updateNotes: (general_notes) => request('/dietplan/notes', { method: 'PUT', body: JSON.stringify({ general_notes }) }),
     updateMeal: (id, data) => request(`/dietplan/meals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     addItem: (mealId, description) => request(`/dietplan/meals/${mealId}/items`, { method: 'POST', body: JSON.stringify({ description }) }),
     updateItem: (id, description) => request(`/dietplan/items/${id}`, { method: 'PUT', body: JSON.stringify({ description }) }),
     removeItem: (id) => request(`/dietplan/items/${id}`, { method: 'DELETE' }),
+    toggleMeal: (id, date) => request(`/dietplan/meals/${id}/toggle`, { method: 'POST', body: JSON.stringify({ date }) }),
   },
 
   protocol: {

@@ -18,6 +18,7 @@ const TABLES = [
   'routine_exercises',
   'diet_plan_meals',
   'diet_plan_items',
+  'diet_meal_logs',
   'supplements',
   'supplement_logs',
   'ergogenic_items',

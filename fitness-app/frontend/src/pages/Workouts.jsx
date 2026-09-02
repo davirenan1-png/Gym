@@ -4,6 +4,7 @@ import { todayKey, formatDate } from '../lib/format.js';
 import { Card } from '../components/Card.jsx';
 import { LineChart } from '../components/LineChart.jsx';
 import { RoutinePlan } from '../components/RoutinePlan.jsx';
+import { Modal } from '../components/Modal.jsx';
 
 export function Workouts() {
   const [exercises, setExercises] = useState([]);
@@ -12,15 +13,13 @@ export function Workouts() {
   const [sessionDate, setSessionDate] = useState(todayKey());
   const [pendingSets, setPendingSets] = useState([]);
   const [setForm, setSetForm] = useState({ exercise_id: '', reps: '', weight_kg: '' });
-  const [progressExerciseId, setProgressExerciseId] = useState('');
-  const [progressPoints, setProgressPoints] = useState([]);
+  const [evolution, setEvolution] = useState(null);
   const registerRef = useRef(null);
 
   const load = useCallback(() => {
     api.workouts.exercises().then((list) => {
       setExercises(list);
       setSetForm((f) => ({ ...f, exercise_id: f.exercise_id || (list[0] ? String(list[0].id) : '') }));
-      setProgressExerciseId((id) => id || (list[0] ? String(list[0].id) : ''));
     });
     api.workouts.sessions(15).then(setSessions);
   }, []);
@@ -28,13 +27,6 @@ export function Workouts() {
   useEffect(() => {
     load();
   }, [load]);
-
-  useEffect(() => {
-    if (!progressExerciseId) return;
-    api.workouts.progress(progressExerciseId).then((rows) =>
-      setProgressPoints(rows.map((r) => ({ y: r.max_weight_kg, label: r.date.slice(5) })))
-    );
-  }, [progressExerciseId]);
 
   async function addExercise(e) {
     e.preventDefault();
@@ -77,18 +69,34 @@ export function Workouts() {
     load();
   }
 
-  async function useExerciseFromPlan(name) {
+  async function findOrCreateExercise(name) {
     let exercise = exercises.find((ex) => ex.name.trim().toLowerCase() === name.trim().toLowerCase());
     if (!exercise) {
       try {
         exercise = await api.workouts.addExercise({ name });
         setExercises((prev) => [...prev, exercise].sort((a, b) => a.name.localeCompare(b.name)));
       } catch {
-        return;
+        return null;
       }
     }
+    return exercise;
+  }
+
+  async function useExerciseFromPlan(name) {
+    const exercise = await findOrCreateExercise(name);
+    if (!exercise) return;
     setSetForm((f) => ({ ...f, exercise_id: String(exercise.id) }));
     registerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function showEvolution(name) {
+    const exercise = await findOrCreateExercise(name);
+    if (!exercise) return;
+    const rows = await api.workouts.progress(exercise.id);
+    setEvolution({
+      name: exercise.name,
+      points: rows.map((r) => ({ y: r.max_weight_kg, label: r.date.slice(5) })),
+    });
   }
 
   return (
@@ -97,23 +105,7 @@ export function Workouts() {
         <h1>Treino</h1>
       </div>
 
-      <RoutinePlan onUseExercise={useExerciseFromPlan} />
-
-      <Card title="Evolução de carga">
-        {exercises.length > 0 && (
-          <>
-            <select value={progressExerciseId} onChange={(e) => setProgressExerciseId(e.target.value)}>
-              {exercises.map((ex) => (
-                <option key={ex.id} value={ex.id}>{ex.name}</option>
-              ))}
-            </select>
-            <div style={{ marginTop: 12 }}>
-              <LineChart points={progressPoints} unit="kg" color="#facc15" />
-            </div>
-          </>
-        )}
-        {exercises.length === 0 && <p className="empty-hint">Cadastre um exercício para começar.</p>}
-      </Card>
+      <RoutinePlan onUseExercise={useExerciseFromPlan} onShowEvolution={showEvolution} />
 
       <Card title="Novo exercício">
         <form onSubmit={addExercise} className="field-row">
@@ -200,6 +192,12 @@ export function Workouts() {
           </div>
         )}
       </Card>
+
+      {evolution && (
+        <Modal title={`Evolução — ${evolution.name}`} onClose={() => setEvolution(null)}>
+          <LineChart points={evolution.points} unit="kg" color="#facc15" />
+        </Modal>
+      )}
     </div>
   );
 }

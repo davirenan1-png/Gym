@@ -9,14 +9,19 @@ export function Today() {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const [todayPlan, setTodayPlan] = useState(null);
+  const [dietMeals, setDietMeals] = useState([]);
   const [supplements, setSupplements] = useState([]);
   const [checkinDone, setCheckinDone] = useState(false);
   const date = todayKey();
 
   const load = useCallback(() => {
     api.dashboard(date).then(setData).catch(() => {});
-    api.routine.list().then((r) => {
-      setTodayPlan(r.days.find((d) => d.position === r.cycle_position) || null);
+    api.routine.list(date).then((r) => {
+      const day = r.days.find((d) => d.position === r.cycle_position) || null;
+      setTodayPlan(day);
+      api.dietPlan.get(date).then((plan) => {
+        setDietMeals(plan[day && day.is_training ? 'treino' : 'descanso'] || []);
+      });
     });
     api.protocol.supplements(date).then((r) => setSupplements(r.supplements));
     api.checkin.today(date).then((r) => setCheckinDone(!!r.checkin));
@@ -41,10 +46,15 @@ export function Today() {
     api.protocol.supplements(date).then((r) => setSupplements(r.supplements));
   }
 
+  async function toggleMeal(meal) {
+    setDietMeals(dietMeals.map((m) => (m.id === meal.id ? { ...m, done: !m.done } : m)));
+    await api.dietPlan.toggleMeal(meal.id, date);
+  }
+
   if (!data) return null;
 
   const waterGoal = Number(data.settings.water_goal_ml) || 3000;
-  const calorieGoal = Number(data.settings.calorie_goal) || 0;
+  const mealsDone = dietMeals.filter((m) => m.done).length;
 
   return (
     <div>
@@ -72,27 +82,29 @@ export function Today() {
         </div>
       </Card>
 
-      <Card title="🍽️ Alimentação">
-        {calorieGoal > 0 ? (
-          <ProgressBar
-            value={data.food.calories}
-            max={calorieGoal}
-            label={`${Math.round(data.food.calories)} kcal / ${calorieGoal} kcal`}
-            color="var(--accent-2)"
-          />
+      <Card title="🍽️ Dieta" action={<Link className="btn btn-sm" to="/dieta">Plano</Link>}>
+        {dietMeals.length === 0 ? (
+          <p className="empty-hint">Sem plano alimentar cadastrado.</p>
         ) : (
-          <p style={{ margin: 0 }}>{Math.round(data.food.calories)} kcal registradas hoje</p>
+          <>
+            <p style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>{mealsDone}/{dietMeals.length} refeições feitas hoje</p>
+            <div className="list">
+              {dietMeals.map((m) => (
+                <label key={m.id} className="list-item" style={{ cursor: 'pointer' }}>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!m.done}
+                      onChange={() => toggleMeal(m)}
+                      style={{ width: 'auto', marginRight: 8 }}
+                    />
+                    {m.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </>
         )}
-        <div className="stat-grid" style={{ marginTop: 12 }}>
-          <div className="stat-tile">
-            <div className="stat-value">{Math.round(data.food.protein_g)}g</div>
-            <div className="stat-label">Proteína</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-value">{Math.round(data.food.carbs_g)}g</div>
-            <div className="stat-label">Carboidrato</div>
-          </div>
-        </div>
       </Card>
 
       <Card title="🏋️ Treino & 🥋 Jiu-Jitsu">
@@ -174,7 +186,9 @@ export function Today() {
                 '—'
               )}
             </div>
-            <div className="stat-label">{data.belt ? `${data.belt.stripes} graus` : 'Sem faixa'}</div>
+            <div className="stat-label">
+              {data.belt ? (data.belt.stripes > 0 ? `${data.belt.stripes} grau${data.belt.stripes > 1 ? 's' : ''}` : 'Sem grau') : 'Sem faixa'}
+            </div>
           </div>
         </div>
       </Card>

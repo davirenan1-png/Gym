@@ -14,15 +14,20 @@ function setSetting(key, value) {
   ).run(key, value ?? '');
 }
 
-function fullPlan() {
+function fullPlan(date) {
   const meals = db.prepare('SELECT * FROM diet_plan_meals ORDER BY plan_type ASC, sort_order ASC').all();
   const itemsByMeal = db.prepare(
     'SELECT * FROM diet_plan_items WHERE meal_id = ? ORDER BY sort_order ASC, id ASC'
   );
+  const doneIds = new Set(
+    db.prepare('SELECT meal_id FROM diet_meal_logs WHERE date = ?').all(date).map((r) => r.meal_id)
+  );
   for (const meal of meals) {
     meal.items = itemsByMeal.all(meal.id);
+    meal.done = doneIds.has(meal.id);
   }
   return {
+    date,
     treino: meals.filter((m) => m.plan_type === 'treino'),
     descanso: meals.filter((m) => m.plan_type === 'descanso'),
     general_notes: getSetting('diet_general_notes'),
@@ -30,7 +35,23 @@ function fullPlan() {
 }
 
 router.get('/', (req, res) => {
-  res.json(fullPlan());
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
+  res.json(fullPlan(date));
+});
+
+router.post('/meals/:id/toggle', (req, res) => {
+  const meal = db.prepare('SELECT * FROM diet_plan_meals WHERE id = ?').get(req.params.id);
+  if (!meal) return res.status(404).json({ error: 'Refeição não encontrada' });
+  const date = req.body.date || new Date().toISOString().slice(0, 10);
+  const existing = db
+    .prepare('SELECT * FROM diet_meal_logs WHERE date = ? AND meal_id = ?')
+    .get(date, req.params.id);
+  if (existing) {
+    db.prepare('DELETE FROM diet_meal_logs WHERE id = ?').run(existing.id);
+    return res.json({ date, done: false });
+  }
+  db.prepare('INSERT INTO diet_meal_logs (date, meal_id) VALUES (?, ?)').run(date, req.params.id);
+  res.json({ date, done: true });
 });
 
 router.put('/notes', (req, res) => {

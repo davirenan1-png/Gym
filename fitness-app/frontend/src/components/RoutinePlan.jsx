@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api.js';
+import { todayKey } from '../lib/format.js';
 import { Card } from './Card.jsx';
 
 const emptyNewExercise = { name: '', sets_reps: '', notes: '' };
@@ -16,7 +17,7 @@ function NoteList({ text }) {
   );
 }
 
-export function RoutinePlan({ onUseExercise }) {
+export function RoutinePlan({ onUseExercise, onShowEvolution }) {
   const [days, setDays] = useState(null);
   const [cyclePosition, setCyclePosition] = useState(0);
   const [principlesNote, setPrinciplesNote] = useState('');
@@ -26,7 +27,7 @@ export function RoutinePlan({ onUseExercise }) {
   const [newExercise, setNewExercise] = useState(emptyNewExercise);
 
   const load = useCallback(() => {
-    api.routine.list().then((data) => {
+    api.routine.list(todayKey()).then((data) => {
       setDays(data.days);
       setCyclePosition(data.cycle_position);
       setPrinciplesNote(data.principles_note || '');
@@ -76,17 +77,6 @@ export function RoutinePlan({ onUseExercise }) {
     await api.routine.addExercise(day.id, newExercise);
     setNewExercise(emptyNewExercise);
     load();
-  }
-
-  async function advance() {
-    const res = await api.routine.advance();
-    setCyclePosition(res.cycle_position);
-    setSelectedPosition(res.cycle_position);
-  }
-
-  async function markAsToday() {
-    await api.routine.setPosition(day.position);
-    setCyclePosition(day.position);
   }
 
   async function saveNotes() {
@@ -173,7 +163,16 @@ export function RoutinePlan({ onUseExercise }) {
           ) : (
             <div key={item.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 2 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong>{item.name}</strong>
+                {onShowEvolution ? (
+                  <button
+                    onClick={() => onShowEvolution(item.name)}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text)', font: 'inherit', fontWeight: 600, textAlign: 'left', textDecoration: 'underline', textDecorationColor: 'var(--border)', textUnderlineOffset: '3px' }}
+                  >
+                    {item.name}
+                  </button>
+                ) : (
+                  <strong>{item.name}</strong>
+                )}
                 {onUseExercise && (
                   <button className="btn btn-sm" onClick={() => onUseExercise(item.name)}>Usar</button>
                 )}
@@ -203,20 +202,6 @@ export function RoutinePlan({ onUseExercise }) {
             <button className="btn" type="submit">+</button>
           </div>
         </form>
-      )}
-
-      {!editMode && (
-        <div className="quick-actions" style={{ marginTop: 12 }}>
-          {isCurrent ? (
-            <button className="btn btn-primary btn-block" onClick={advance}>
-              ✅ Concluí — avançar pro próximo dia
-            </button>
-          ) : (
-            <button className="btn btn-block" onClick={markAsToday}>
-              Marcar &quot;{day.title}&quot; como hoje
-            </button>
-          )}
-        </div>
       )}
 
       {editMode ? (

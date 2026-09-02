@@ -8,13 +8,23 @@ function getSetting(key) {
   return row ? row.value : '';
 }
 
-function setSetting(key, value) {
-  db.prepare(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-  ).run(key, value ?? '');
+// Position 0 (Legs 1) lands on this Monday; the 12-day cycle repeats from
+// there, so which weekday a given training day falls on drifts week to week
+// (12 isn't a multiple of 7) — that's expected, not a bug.
+const ROUTINE_ANCHOR_MONDAY = '2026-08-31';
+
+function daysBetween(a, b) {
+  const d1 = new Date(`${a}T00:00:00Z`);
+  const d2 = new Date(`${b}T00:00:00Z`);
+  return Math.round((d2 - d1) / 86400000);
 }
 
-function fullRoutine() {
+function positionForDate(dateStr, cycleLength) {
+  const diff = daysBetween(ROUTINE_ANCHOR_MONDAY, dateStr);
+  return ((diff % cycleLength) + cycleLength) % cycleLength;
+}
+
+function fullRoutine(date) {
   const days = db.prepare('SELECT * FROM routine_days ORDER BY position ASC').all();
   const exercisesByDay = db.prepare(
     'SELECT * FROM routine_exercises WHERE routine_day_id = ? ORDER BY sort_order ASC, id ASC'
@@ -24,35 +34,15 @@ function fullRoutine() {
   }
   return {
     days,
-    cycle_position: Number(getSetting('cycle_position')) || 0,
+    cycle_position: days.length ? positionForDate(date, days.length) : 0,
     principles_note: getSetting('routine_principles_note'),
     extras_note: getSetting('routine_extras_note'),
   };
 }
 
 router.get('/', (req, res) => {
-  res.json(fullRoutine());
-});
-
-router.put('/advance', (req, res) => {
-  const days = db.prepare('SELECT position FROM routine_days ORDER BY position ASC').all();
-  if (days.length === 0) return res.status(400).json({ error: 'Nenhum dia cadastrado no ciclo' });
-  const current = Number(getSetting('cycle_position')) || 0;
-  const maxPosition = days[days.length - 1].position;
-  const positions = days.map((d) => d.position);
-  const idx = positions.indexOf(current);
-  const next = idx === -1 || idx === positions.length - 1 ? positions[0] : positions[idx + 1];
-  setSetting('cycle_position', String(next));
-  res.json({ cycle_position: next, max_position: maxPosition });
-});
-
-router.put('/position', (req, res) => {
-  const { position } = req.body;
-  if (position === undefined || position === null) {
-    return res.status(400).json({ error: 'position é obrigatório' });
-  }
-  setSetting('cycle_position', String(position));
-  res.json({ cycle_position: Number(position) });
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
+  res.json(fullRoutine(date));
 });
 
 router.put('/notes', (req, res) => {

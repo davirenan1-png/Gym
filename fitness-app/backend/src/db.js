@@ -123,6 +123,14 @@ db.exec(`
     description TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS diet_meal_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    meal_id INTEGER NOT NULL REFERENCES diet_plan_meals(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (date, meal_id)
+  );
+
   CREATE TABLE IF NOT EXISTS supplements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -203,6 +211,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_supplement_logs_date ON supplement_logs(date);
   CREATE INDEX IF NOT EXISTS idx_ergogenic_logs_date ON ergogenic_logs(date);
   CREATE INDEX IF NOT EXISTS idx_checkin_logs_date ON checkin_logs(date);
+  CREATE INDEX IF NOT EXISTS idx_diet_meal_logs_date ON diet_meal_logs(date);
 `);
 
 const defaultSettings = {
@@ -212,7 +221,6 @@ const defaultSettings = {
   carbs_goal_g: '',
   fat_goal_g: '',
   weight_goal_kg: '',
-  cycle_position: '0',
   routine_principles_note:
     'Registre todas as sessões — tente sempre superar a carga/reps anterior (mesmo que só +0,125kg).\n' +
     'As séries escritas são até a falha de verdade — não pare em número fixo, vá até falhar dentro da faixa de reps.\n' +
@@ -374,7 +382,8 @@ const routineSeed = [
 ];
 
 const routineDaysCount = db.prepare('SELECT COUNT(*) AS c FROM routine_days').get().c;
-if (routineDaysCount === 0) {
+if (routineDaysCount !== routineSeed.length) {
+  db.prepare('DELETE FROM routine_days').run();
   const insertDay = db.prepare(
     'INSERT INTO routine_days (position, title, is_training, note) VALUES (?, ?, ?, ?)'
   );
